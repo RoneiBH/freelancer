@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Freelancer Seguro</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="min-h-screen bg-slate-100 text-slate-800 flex flex-col">
+
+    <div id="root" class="flex flex-col min-h-screen"></div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, onSnapshot, doc, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Cole aqui a configuração do SEU projeto Firebase para ter login Google e dados compartilhados.
+        // Com tudo vazio, o site funciona em modo local (dados salvos só neste navegador).
+        const firebaseConfig = {
+            apiKey: "",
+            authDomain: "",
+            projectId: "",
+            storageBucket: "",
+            messagingSenderId: "",
+            appId: ""
+        };
+
+        const firebaseReady = Boolean(firebaseConfig.apiKey);
+        const app = firebaseReady ? initializeApp(firebaseConfig) : null;
+        const auth = firebaseReady ? getAuth(app) : null;
+        const db = firebaseReady ? getFirestore(app) : null;
+        const appId = 'freeeval-supermercados';
+
+        const LOCAL_STORAGE_KEY = 'freeeval_stores_v9';
+        const AUTHORIZED_ADMIN_EMAIL = 'admin@freeeval.com';
+
+        const DEFAULT_INITIAL_STORES = [
+            {
+                id: 'store_1',
+                name: 'Supermercados BH - Savassi',
+                neighborhood: 'Savassi',
+                address: 'Av. do Contorno, 6000 - Bairro Savassi - Belo Horizonte, MG',
+                category: 'Supermercado',
+                registeredBy: 'Administrador',
+                stats: {
+                    coffee: { yes: 39, no: 3 },
+                    lunch: { yes: 40, no: 2 },
+                    microwave: { yes: 35, no: 7 },
+                    breakTime: { yes: 41, no: 1 },
+                    flexibility: 4.8
+                },
+                reviews: [
+                    {
+                        id: 'r1',
+                        role: 'Promotor de Vendas',
+                        status: 'Atual',
+                        period: '6 meses',
+                        isAnonymous: false,
+                        userName: 'Carlos Eduardo M.',
+                        date: 'Há 2 dias',
+                        rating: 5,
+                        coffee: 'SIM',
+                        lunch: 'SIM',
+                        microwave: 'SIM',
+                        breakTime: 'SIM',
+                        flexibility: 5,
+                        comment: 'Excelente loja para trabalhar! O refeitório conta com micro-ondas em bom estado e café nos dois turnos.'
+                    }
+                ]
+            },
+            {
+                id: 'store_2',
+                name: 'Supernosso - Belvedere',
+                neighborhood: 'Belvedere',
+                address: 'Av. Luiz Paulo Franco, 400 - Bairro Belvedere - Belo Horizonte, MG',
+                category: 'Gourmet',
+                registeredBy: 'Administrador',
+                stats: {
+                    coffee: { yes: 19, no: 1 },
+                    lunch: { yes: 18, no: 2 },
+                    microwave: { yes: 19, no: 1 },
+                    breakTime: { yes: 19, no: 1 },
+                    flexibility: 4.9
+                },
+                reviews: [
+                    {
+                        id: 'r2',
+                        role: 'Promotor de Bebidas',
+                        status: 'Atual',
+                        period: '1 ano',
+                        isAnonymous: false,
+                        userName: 'Aline Souza',
+                        date: 'Ontem',
+                        rating: 5,
+                        coffee: 'SIM',
+                        lunch: 'SIM',
+                        microwave: 'SIM',
+                        breakTime: 'SIM',
+                        flexibility: 5,
+                        comment: 'A melhor loja da região! Tratam o pessoal terceirizado com respeito e o espaço de descanso é ótimo.'
+                    }
+                ]
+            }
+        ];
+
+        window.state = {
+            user: null,
+            userRole: 'FREELANCER',
+            searchTerm: '',
+            selectedCategory: 'ALL',
+            sortBy: 'RATING',
+            stores: (() => {
+                try {
+                    const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
+                    if (saved) return JSON.parse(saved).filter(s => /^[\w-]+$/.test(s.id));
+                } catch(e) {}
+                return DEFAULT_INITIAL_STORES;
+            })(),
+            selectedStoreDetail: null,
+            isReviewModalOpen: false,
+            isAddStoreModalOpen: false,
+            isEditStoreModalOpen: false,
+            isAuthModalOpen: false,
+            editingStore: null,
+            storeToDelete: null,
+            toastMsg: '',
+            reviewForm: {
+                storeId: '',
+                role: 'Promotor de Vendas',
+                status: 'Atual',
+                period: '1 a 6 meses',
+                isAnonymous: false,
+                rating: 5,
+                coffee: 'SIM',
+                lunch: 'SIM',
+                microwave: 'SIM',
+                breakTime: 'SIM',
+                flexibility: 5,
+                comment: ''
+            },
+            newStoreForm: {
+                name: '',
+                neighborhood: '',
+                address: '',
+                category: 'Supermercado',
+                cityState: 'Belo Horizonte, MG'
+            }
+        };
+
+        function showToast(msg) {
+            window.state.toastMsg = msg;
+            render();
+            setTimeout(() => {
+                window.state.toastMsg = '';
+                render();
+            }, 3500);
+        }
+        window.showToast = showToast;
+
+        if (firebaseReady) {
+        signInAnonymously(auth).catch(() => {});
+        onAuthStateChanged(auth, (u) => {
+            if (u && !u.isAnonymous) {
+                window.state.user = u;
+                if (u.email === AUTHORIZED_ADMIN_EMAIL) {
+                    window.state.userRole = 'ADMIN';
+                } else {
+                    window.state.userRole = 'FREELANCER';
+                }
+            } else {
+                window.state.userRole = 'FREELANCER';
+            }
+            render();
+        });
+        }
+
+        try {
+            if (firebaseReady) onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'stores'), (snapshot) => {
+                if (snapshot && !snapshot.empty) {
+                    const loaded = snapshot.docs.map(d => ({ id: d.id, ...d.data() })).filter(s => !s._deleted && /^[\w-]+$/.test(s.id));
+                    window.state.stores = loaded;
+                    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(loaded));
+                    render();
+                }
+            }, () => {});
+        } catch(e) {}
+
+        const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+        function calculateScore(stats) {
+            const safeStats = stats || {};
+            const getRatio = (item) => {
+                const sub = item || { yes: 0, no: 0 };
+                const total = (sub.yes || 0) + (sub.no || 0);
+                if (total === 0) return 3;
+                return ((sub.yes || 0) / total) * 5;
+            };
+            const c = getRatio(safeStats.coffee);
+            const l = getRatio(safeStats.lunch);
+            const m = getRatio(safeStats.microwave);
+            const b = getRatio(safeStats.breakTime);
+            const f = safeStats.flexibility || 3;
+            return Number(((c * 0.15) + (l * 0.15) + (m * 0.15) + (b * 0.25) + (f * 0.30)).toFixed(1));
+        }
+
+        function getMajority(item) {
+            const sub = item || { yes: 0, no: 0 };
+            const yes = sub.yes || 0;
+            const no = sub.no || 0;
+            if (yes === 0 && no === 0) return 'SIM';
+            return yes >= no ? 'SIM' : 'NÃO';
+        }
+
+        function getBadge(score, count) {
+            if (count === 0) return { label: 'Sem Avaliações', bg: 'bg-slate-100', text: 'text-slate-600', border: 'border-slate-300' };
+            if (score >= 4.0) return { label: 'Melhor Loja (Excelente)', bg: 'bg-emerald-100', text: 'text-emerald-800', border: 'border-emerald-300' };
+            if (score >= 2.5) return { label: 'Loja Média (Regular)', bg: 'bg-amber-100', text: 'text-amber-800', border: 'border-amber-300' };
+            return { label: 'Pior Loja (Atenção)', bg: 'bg-rose-100', text: 'text-rose-800', border: 'border-rose-300' };
+        }
+
+        window.handleGoogleLogin = async () => {
+            if (!firebaseReady) {
+                window.state.user = { uid: 'demo_user', displayName: 'Modo demonstração', email: AUTHORIZED_ADMIN_EMAIL };
+                window.state.userRole = 'ADMIN';
+                window.state.isAuthModalOpen = false;
+                showToast('Modo demonstração: administrador local ativado.');
+                render();
+                return;
+            }
+            try {
+                const provider = new GoogleAuthProvider();
+                const res = await signInWithPopup(auth, provider);
+                window.state.user = res.user;
+                
+                if (res.user.email === AUTHORIZED_ADMIN_EMAIL) {
+                    window.state.userRole = 'ADMIN';
+                    showToast('Logado como Administrador!');
+                } else {
+                    window.state.userRole = 'FREELANCER';
+                    showToast('Login realizado com sucesso!');
+                }
+
+                window.state.isAuthModalOpen = false;
+                render();
+            } catch (err) {
+                showToast('Não foi possível entrar com o Google.');
+            }
+        };
+
+        window.handleSignOut = async () => {
+            if (auth) await signOut(auth).catch(() => {});
+            window.state.user = null;
+            window.state.userRole = 'FREELANCER';
+            showToast('Sessão encerrada.');
+            render();
+        };
+
+        window.saveNewStore = (e) => {
+            e.preventDefault();
+            if (window.state.userRole !== 'ADMIN') {
+                showToast('Apenas o administrador principal pode cadastrar lojas.');
+                return;
+            }
+            const f = window.state.newStoreForm;
+            if (!f.name || !f.name.trim()) {
+                showToast('Por favor, informe o nome do supermercado.');
+                return;
+            }
+
+            const id = 'store_' + Date.now();
+            const fullAddress = [f.address.trim(), f.neighborhood ? `Bairro ${f.neighborhood}` : '', f.cityState].filter(Boolean).join(' - ') || 'Endereço não informado';
+            
+            const newObj = {
+                id,
+                name: f.name.trim(),
+                neighborhood: f.neighborhood.trim(),
+                address: fullAddress,
+                category: f.category || 'Supermercado',
+                registeredBy: 'Administrador',
+                stats: { 
+                    coffee: {yes:0, no:0}, 
+                    lunch: {yes:0, no:0}, 
+                    microwave: {yes:0, no:0},
+                    breakTime: {yes:0, no:0}, 
+                    flexibility: 5 
+                },
+                reviews: []
+            };
+
+            window.state.stores = [newObj, ...window.state.stores];
+            try {
+                localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(window.state.stores));
+            } catch(err) {}
+
+            try {
+                setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'stores', id), newObj);
+            } catch(err) {}
+
+            window.state.isAddStoreModalOpen = false;
+            window.state.newStoreForm = { name: '', neighborhood: '', address: '', category: 'Supermercado', cityState: 'Belo Horizonte, MG' };
+            showToast('Loja cadastrada com sucesso!');
+            render();
+        };
+
+        window.saveEditedStore = (e) => {
+            e.preventDefault();
+            if (window.state.userRole !== 'ADMIN' || !window.state.editingStore) return;
+            const ed = window.state.editingStore;
+            
+            window.state.stores = window.state.stores.map(st => st.id === ed.id ? ed : st);
+            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(window.state.stores));
+            try {
+                updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'stores', ed.id), {
+                    name: ed.name,
+                    neighborhood: ed.neighborhood,
+                    address: ed.address,
+                    category: ed.category
+                });
+            } catch(err) {}
+
+            window.state.isEditStoreModalOpen = false;
+            window.state.editingStore = null;
+            showToast('Loja atualizada com sucesso!');
+            render();
+        };
+
+        window.confirmDeleteStore = () => {
+            const st = window.state.storeToDelete;
+            if (!st || window.state.userRole !== 'ADMIN') return;
+
+            window.state.stores = window.state.stores.filter(s => s.id !== st.id);
+            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(window.state.stores));
+            try {
+                setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'stores', st.id), { _deleted: true }, { merge: true });
+            } catch(err) {}
+
+            window.state.storeToDelete = null;
+            window.state.selectedStoreDetail = null;
+            showToast('Loja excluída!');
+            render();
+        };
+
+        window.submitReview = (e) => {
+            if (e) e.preventDefault();
+            const rf = window.state.reviewForm;
+            if (!rf.storeId) {
+                showToast('Por favor, selecione uma loja para avaliar.');
+                return;
+            }
+            const target = window.state.stores.find(s => s.id === rf.storeId);
+            if (!target) {
+                showToast('Loja selecionada não encontrada.');
+                return;
+            }
+
+            const newRev = {
+                id: 'rev_' + Date.now(),
+                role: rf.role,
+                status: rf.status,
+                period: rf.period,
+                isAnonymous: rf.isAnonymous,
+                userName: rf.isAnonymous ? 'Anônimo' : (window.state.user?.displayName || 'Freelancer'),
+                date: 'Agora mesmo',
+                rating: Number(rf.rating),
+                coffee: rf.coffee,
+                lunch: rf.lunch,
+                microwave: rf.microwave,
+                breakTime: rf.breakTime,
+                flexibility: Number(rf.flexibility),
+                comment: rf.comment
+            };
+
+            const tStats = target.stats || { 
+                coffee: {yes:0, no:0}, 
+                lunch: {yes:0, no:0}, 
+                microwave: {yes:0, no:0}, 
+                breakTime: {yes:0, no:0}, 
+                flexibility: 5 
+            };
+
+            const updatedStats = {
+                coffee: { yes: (tStats.coffee?.yes || 0) + (rf.coffee === 'SIM' ? 1 : 0), no: (tStats.coffee?.no || 0) + (rf.coffee === 'NÃO' ? 1 : 0) },
+                lunch: { yes: (tStats.lunch?.yes || 0) + (rf.lunch === 'SIM' ? 1 : 0), no: (tStats.lunch?.no || 0) + (rf.lunch === 'NÃO' ? 1 : 0) },
+                microwave: { yes: (tStats.microwave?.yes || 0) + (rf.microwave === 'SIM' ? 1 : 0), no: (tStats.microwave?.no || 0) + (rf.microwave === 'NÃO' ? 1 : 0) },
+                breakTime: { yes: (tStats.breakTime?.yes || 0) + (rf.breakTime === 'SIM' ? 1 : 0), no: (tStats.breakTime?.no || 0) + (rf.breakTime === 'NÃO' ? 1 : 0) },
+                flexibility: Number(((tStats.flexibility * (target.reviews?.length || 0) + Number(rf.flexibility)) / ((target.reviews?.length || 0) + 1)).toFixed(1))
+            };
+
+            const updatedStore = {
+                ...target,
+                stats: updatedStats,
+                reviews: [newRev, ...(target.reviews || [])]
+            };
+
+            window.state.stores = window.state.stores.map(s => s.id === target.id ? updatedStore : s);
+            try {
+                localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(window.state.stores));
+            } catch(err) {}
+
+            try {
+                setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'stores', target.id), updatedStore, { merge: true });
+            } catch(err) {}
+
+            window.state.isReviewModalOpen = false;
+            window.state.reviewForm.comment = '';
+            showToast('Avaliação salva com sucesso!');
+            render();
+        };
+
+        function render() {
+            const root = document.getElementById('root');
+            if (!root) return;
+            
+            const filtered = window.state.stores.map(st => {
+                const score = calculateScore(st.stats);
+                const badge = getBadge(score, st.reviews.length);
+                return { ...st, score, badge };
+            }).filter(st => {
+                const matchSearch = st.name.toLowerCase().includes(window.state.searchTerm.toLowerCase()) || st.address.toLowerCase().includes(window.state.searchTerm.toLowerCase());
+                let matchCat = true;
+                if (window.state.selectedCategory === 'BEST') matchCat = st.score >= 4.0;
+                else if (window.state.selectedCategory === 'MEDIUM') matchCat = st.score >= 2.5 && st.score < 4.0;
+                else if (window.state.selectedCategory === 'WORST') matchCat = st.score < 2.5;
+                return matchSearch && matchCat;
+            }).sort((a,b) => {
+                if (window.state.sortBy === 'RATING') return b.score - a.score;
+                if (window.state.sortBy === 'REVIEWS') return b.reviews.length - a.reviews.length;
+                return a.name.localeCompare(b.name);
+            });
+
+            root.innerHTML = `
+                ${window.state.toastMsg ? `
+                    <div class="fixed top-4 right-4 z-50 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2 border border-slate-700">
+                        <i data-lucide="sparkles" class="w-4 h-4 text-emerald-400"></i>
+                        <span class="text-xs font-semibold">${window.state.toastMsg}</span>
+                    </div>
+                ` : ''}
+
+                <header class="bg-emerald-900 text-white shadow-lg sticky top-0 z-30">
+                    <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col items-center justify-center text-center gap-3">
+                        <div>
+                            <h1 class="text-xl font-black tracking-tight text-white">FreeEval Supermercados</h1>
+                            <p class="text-xs text-emerald-200">A comunidade colaborativa de freelancers para avaliar as condições das lojas</p>
+                        </div>
+                        <div class="flex items-center gap-2.5 flex-wrap justify-center">
+                            ${window.state.userRole === 'ADMIN' ? `
+                                <button onclick="window.openAddStore()" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold text-xs shadow-md transition flex items-center gap-1.5 whitespace-nowrap">
+                                    <i data-lucide="plus-circle" class="w-4 h-4"></i> Cadastrar Nova Loja
+                                </button>
+                            ` : ''}
+                            <button onclick="window.openReviewModal()" class="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold rounded-xl text-xs shadow-md transition flex items-center gap-1.5 whitespace-nowrap">
+                                <i data-lucide="plus-circle" class="w-4 h-4"></i> Avaliar Supermercado
+                            </button>
+                            ${window.state.user ? `
+                                <div class="flex items-center gap-3 bg-emerald-950/60 pl-3 pr-2 py-1.5 rounded-2xl border border-emerald-700/60 whitespace-nowrap">
+                                    <div class="text-right">
+                                        <div class="text-xs font-bold text-emerald-100">${esc(window.state.user.displayName || window.state.user.email)}</div>
+                                        <div class="text-[10px] text-emerald-300">${window.state.userRole === 'ADMIN' ? 'Administrador' : 'Freelancer'}</div>
+                                    </div>
+                                    <button onclick="window.handleSignOut()" class="p-1.5 bg-emerald-800 hover:bg-rose-700 text-white rounded-xl transition">
+                                        <i data-lucide="log-out" class="w-4 h-4"></i>
+                                    </button>
+                                </div>
+                            ` : `
+                                <button onclick="window.openAuthModal()" class="px-4 py-2 bg-white/10 hover:bg-white/20 text-white border border-emerald-600 rounded-xl font-bold text-xs transition flex items-center gap-2 whitespace-nowrap">
+                                    <i data-lucide="user" class="w-4 h-4 text-emerald-300"></i> Entrar com Google
+                                </button>
+                            `}
+                        </div>
+                    </div>
+                </header>
+
+                <main class="max-w-7xl mx-auto px-4 py-8 flex-1 w-full space-y-6">
+                    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row gap-4 items-center justify-between">
+                        <div class="flex items-center gap-1.5 overflow-x-auto w-full md:w-auto pb-2 md:pb-0">
+                            <button onclick="window.setCategory('ALL')" class="px-3.5 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap ${window.state.selectedCategory === 'ALL' ? 'bg-emerald-800 text-white' : 'bg-slate-100 text-slate-600'}">
+                                Todas as Lojas (${window.state.stores.length})
+                            </button>
+                            <button onclick="window.setCategory('BEST')" class="px-3.5 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap ${window.state.selectedCategory === 'BEST' ? 'bg-emerald-600 text-white' : 'bg-emerald-50 text-emerald-800'}">
+                                Melhores
+                            </button>
+                            <button onclick="window.setCategory('MEDIUM')" class="px-3.5 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap ${window.state.selectedCategory === 'MEDIUM' ? 'bg-amber-500 text-white' : 'bg-amber-50 text-amber-800'}">
+                                Médias
+                            </button>
+                            <button onclick="window.setCategory('WORST')" class="px-3.5 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap ${window.state.selectedCategory === 'WORST' ? 'bg-rose-600 text-white' : 'bg-rose-50 text-rose-800'}">
+                                Piores
+                            </button>
+                        </div>
+                        <div class="flex items-center gap-3 w-full md:w-auto">
+                            <div class="relative flex-1 md:w-64">
+                                <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                                <input type="text" placeholder="Buscar loja ou bairro..." id="searchInput" value="${esc(window.state.searchTerm)}" oninput="window.setSearch(this.value)" class="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium"/>
+                            </div>
+                            <select onchange="window.setSort(this.value)" class="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700">
+                                <option value="RATING" ${window.state.sortBy === 'RATING' ? 'selected' : ''}>Maior Nota</option>
+                                <option value="REVIEWS" ${window.state.sortBy === 'REVIEWS' ? 'selected' : ''}>Mais Avaliadas</option>
+                                <option value="NAME" ${window.state.sortBy === 'NAME' ? 'selected' : ''}>Ordem Alfabética</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    ${filtered.length === 0 ? `
+                        <div class="bg-white rounded-2xl p-12 text-center border border-slate-200 space-y-3">
+                            <i data-lucide="alert-circle" class="w-10 h-10 text-slate-300 mx-auto"></i>
+                            <h3 class="text-base font-bold text-slate-700">Nenhum supermercado encontrado</h3>
+                        </div>
+                    ` : `
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            ${filtered.map(st => {
+                                const stStats = st.stats || {};
+                                const coffeeVal = getMajority(stStats.coffee);
+                                const lunchVal = getMajority(stStats.lunch);
+                                const micVal = getMajority(stStats.microwave);
+                                const breakVal = getMajority(stStats.breakTime);
+                                return `
+                                    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition overflow-hidden flex flex-col">
+                                        <div class="p-5 border-b border-slate-100 flex items-start justify-between gap-3">
+                                            <div class="space-y-1">
+                                                <div class="flex items-center gap-2">
+                                                    <span class="px-2.5 py-0.5 rounded-full text-[11px] font-extrabold border ${st.badge.bg} ${st.badge.text} ${st.badge.border}">${st.badge.label}</span>
+                                                    <span class="text-[11px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md">${esc(st.category)}</span>
+                                                </div>
+                                                <h3 class="text-base font-bold text-slate-900 pt-1">${esc(st.name)}</h3>
+                                                <p class="text-xs text-slate-500 flex items-center gap-1">
+                                                    <i data-lucide="map-pin" class="w-3.5 h-3.5 text-emerald-600 shrink-0"></i> ${esc(st.address)}
+                                                </p>
+                                            </div>
+                                            <div class="bg-slate-900 text-white p-2.5 rounded-2xl text-center shrink-0 min-w-[64px]">
+                                                <div class="text-lg font-black text-amber-400 leading-none">${st.reviews.length > 0 ? st.score : '-'}</div>
+                                                <div class="text-[9px] font-bold text-slate-400 uppercase tracking-wider mt-1">Nota Geral</div>
+                                            </div>
+                                        </div>
+                                        <div class="p-5 bg-slate-50/50 space-y-3 flex-1">
+                                            <h4 class="text-[11px] font-extrabold uppercase tracking-wider text-slate-400">Resumo das Avaliações</h4>
+                                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
+                                                <div class="bg-white p-3 rounded-xl border border-slate-200 flex items-center justify-between">
+                                                    <span class="font-semibold text-slate-700 flex items-center gap-1.5"><i data-lucide="coffee" class="w-4 h-4 text-amber-600"></i> Café?</span>
+                                                    <span class="font-extrabold px-2.5 py-0.5 rounded border ${coffeeVal === 'SIM' ? 'text-emerald-700 bg-emerald-50 border-emerald-200' : 'text-rose-700 bg-rose-50 border-rose-200'}">${coffeeVal}</span>
+                                                </div>
+                                                <div class="bg-white p-3 rounded-xl border border-slate-200 flex items-center justify-between">
+                                                    <span class="font-semibold text-slate-700 flex items-center gap-1.5"><i data-lucide="utensils" class="w-4 h-4 text-orange-600"></i> Almoço?</span>
+                                                    <span class="font-extrabold px-2.5 py-0.5 rounded border ${lunchVal === 'SIM' ? 'text-emerald-700 bg-emerald-50 border-emerald-200' : 'text-rose-700 bg-rose-50 border-rose-200'}">${lunchVal}</span>
+                                                </div>
+                                                <div class="bg-white p-3 rounded-xl border border-slate-200 flex items-center justify-between">
+                                                    <span class="font-semibold text-slate-700 flex items-center gap-1.5"><i data-lucide="box" class="w-4 h-4 text-purple-600"></i> Micro-ondas?</span>
+                                                    <span class="font-extrabold px-2.5 py-0.5 rounded border ${micVal === 'SIM' ? 'text-emerald-700 bg-emerald-50 border-emerald-200' : 'text-rose-700 bg-rose-50 border-rose-200'}">${micVal}</span>
+                                                </div>
+                                                <div class="bg-white p-3 rounded-xl border border-slate-200 flex items-center justify-between">
+                                                    <span class="font-semibold text-slate-700 flex items-center gap-1.5"><i data-lucide="clock" class="w-4 h-4 text-indigo-600"></i> Pausa certa?</span>
+                                                    <span class="font-extrabold px-2.5 py-0.5 rounded border ${breakVal === 'SIM' ? 'text-emerald-700 bg-emerald-50 border-emerald-200' : 'text-rose-700 bg-rose-50 border-rose-200'}">${breakVal}</span>
+                                                </div>
+                                                <div class="bg-white p-3 rounded-xl border border-slate-200 flex items-center justify-between sm:col-span-2">
+                                                    <span class="font-semibold text-slate-700 flex items-center gap-1.5"><i data-lucide="users" class="w-4 h-4 text-blue-600"></i> Gestão Flexível</span>
+                                                    <span class="font-extrabold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200 text-xs">${stStats.flexibility || 5.0} / 5.0</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="p-4 bg-white border-t border-slate-100 flex items-center justify-between gap-2">
+                                            <span class="text-xs text-slate-500 font-medium">${st.reviews.length} avaliações</span>
+                                            <div class="flex items-center gap-2">
+                                                ${window.state.userRole === 'ADMIN' ? `
+                                                    <button onclick="window.openEditStore('${st.id}')" class="px-2.5 py-1.5 bg-purple-50 text-purple-700 border border-purple-200 text-xs font-bold rounded-xl flex items-center gap-1"><i data-lucide="pencil" class="w-3.5 h-3.5"></i> Editar</button>
+                                                    <button onclick="window.openDeleteStore('${st.id}')" class="px-2.5 py-1.5 bg-rose-50 text-rose-600 border border-rose-200 text-xs font-bold rounded-xl flex items-center gap-1"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Excluir</button>
+                                                ` : ''}
+                                                <button onclick="window.openReviewModalFor('${st.id}')" class="px-3 py-1.5 bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-bold rounded-xl flex items-center gap-1"><i data-lucide="plus-circle" class="w-3.5 h-3.5"></i> Avaliar</button>
+                                                <button onclick="window.openDetail('${st.id}')" class="px-3.5 py-1.5 bg-slate-900 text-white rounded-xl text-xs font-bold flex items-center gap-1">Ver Detalhes <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i></button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    `
+                    }
+                </main>
+
+                ${window.state.isAuthModalOpen ? `
+                    <div class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+                        <div class="bg-white w-full max-w-md rounded-2xl shadow-xl p-6 space-y-5 relative">
+                            <button onclick="window.closeModals()" class="absolute top-4 right-4 text-slate-400"><i data-lucide="x" class="w-5 h-5"></i></button>
+                            <div class="text-center space-y-2">
+                                <div class="w-12 h-12 bg-emerald-100 text-emerald-800 rounded-2xl flex items-center justify-center mx-auto"><i data-lucide="lock" class="w-6 h-6"></i></div>
+                                <h3 class="text-lg font-extrabold text-slate-900">Autenticação Necessária</h3>
+                                <p class="text-xs text-slate-600">Para manter a veracidade das avaliações, entre com a sua conta Google.</p>
+                            </div>
+                            <button onclick="window.handleGoogleLogin()" class="w-full py-3 bg-slate-900 text-white rounded-xl font-bold text-xs shadow-md flex items-center justify-center gap-3">Entrar com Conta Google</button>
+                        </div>
+                    </div>
+                ` : ''}
+
+                ${window.state.isAddStoreModalOpen && window.state.userRole === 'ADMIN' ? `
+                    <div class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+                        <div class="bg-white w-full max-w-lg rounded-2xl shadow-xl overflow-hidden relative">
+                            <div class="p-5 bg-purple-900 text-white flex items-center justify-between">
+                                <h3 class="text-base font-bold flex items-center gap-2"><i data-lucide="store" class="w-5 h-5 text-purple-300"></i> Cadastrar Novo Supermercado</h3>
+                                <button onclick="window.closeModals()"><i data-lucide="x" class="w-5 h-5"></i></button>
+                            </div>
+                            <form onsubmit="window.saveNewStore(event)" class="p-6 space-y-4">
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-700 mb-1">Nome do Supermercado *</label>
+                                    <input type="text" required value="${esc(window.state.newStoreForm.name)}" oninput="state.newStoreForm.name=this.value" placeholder="Ex: Supermercados BH" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs"/>
+                                </div>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-700 mb-1">Bairro *</label>
+                                        <input type="text" required value="${esc(window.state.newStoreForm.neighborhood)}" oninput="state.newStoreForm.neighborhood=this.value" placeholder="Ex: Savassi" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs"/>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-700 mb-1">Categoria</label>
+                                        <select onchange="state.newStoreForm.category=this.value" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs">
+                                            <option value="Supermercado">Supermercado</option>
+                                            <option value="Atacarejo">Atacarejo</option>
+                                            <option value="Hipermercado">Hipermercado</option>
+                                            <option value="Gourmet">Gourmet</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-700 mb-1">Endereço / Logradouro</label>
+                                    <input type="text" value="${esc(window.state.newStoreForm.address)}" oninput="state.newStoreForm.address=this.value" placeholder="Ex: Av. do Contorno, 6000" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs"/>
+                                </div>
+                                <div class="pt-3 border-t flex justify-end gap-2">
+                                    <button type="button" onclick="window.closeModals()" class="px-4 py-2 text-slate-600 text-xs font-bold">Cancelar</button>
+                                    <button type="submit" class="px-5 py-2 bg-purple-700 text-white rounded-xl text-xs font-bold shadow-md">Salvar Loja</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                ` : ''}
+
+                ${window.state.isEditStoreModalOpen && window.state.editingStore && window.state.userRole === 'ADMIN' ? `
+                    <div class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+                        <div class="bg-white w-full max-w-lg rounded-2xl shadow-xl overflow-hidden relative">
+                            <div class="p-5 bg-purple-900 text-white flex items-center justify-between">
+                                <h3 class="text-base font-bold flex items-center gap-2"><i data-lucide="pencil" class="w-5 h-5 text-purple-300"></i> Editar Loja</h3>
+                                <button onclick="window.closeModals()"><i data-lucide="x" class="w-5 h-5"></i></button>
+                            </div>
+                            <form onsubmit="window.saveEditedStore(event)" class="p-6 space-y-4">
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-700 mb-1">Nome *</label>
+                                    <input type="text" required value="${esc(window.state.editingStore.name)}" oninput="state.editingStore.name=this.value" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs"/>
+                                </div>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-700 mb-1">Bairro</label>
+                                        <input type="text" value="${esc(window.state.editingStore.neighborhood)}" oninput="state.editingStore.neighborhood=this.value" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs"/>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-700 mb-1">Categoria</label>
+                                        <select onchange="state.editingStore.category=this.value" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs">
+                                            <option value="Supermercado" ${window.state.editingStore.category === 'Supermercado' ? 'selected' : ''}>Supermercado</option>
+                                            <option value="Atacarejo" ${window.state.editingStore.category === 'Atacarejo' ? 'selected' : ''}>Atacarejo</option>
+                                            <option value="Hipermercado" ${window.state.editingStore.category === 'Hipermercado' ? 'selected' : ''}>Hipermercado</option>
+                                            <option value="Gourmet" ${window.state.editingStore.category === 'Gourmet' ? 'selected' : ''}>Gourmet</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-700 mb-1">Endereço Completo</label>
+                                    <input type="text" value="${esc(window.state.editingStore.address)}" oninput="state.editingStore.address=this.value" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs"/>
+                                </div>
+                                <div class="pt-3 border-t flex justify-end gap-2">
+                                    <button type="button" onclick="window.closeModals()" class="px-4 py-2 text-slate-600 text-xs font-bold">Cancelar</button>
+                                    <button type="submit" class="px-5 py-2 bg-purple-700 text-white rounded-xl text-xs font-bold">Salvar Alterações</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                ` : ''}
+
+                ${window.state.storeToDelete && window.state.userRole === 'ADMIN' ? `
+                    <div class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+                        <div class="bg-white w-full max-w-md rounded-2xl shadow-xl p-6 space-y-4 text-center">
+                            <div class="w-12 h-12 bg-rose-100 text-rose-600 rounded-2xl flex items-center justify-center mx-auto"><i data-lucide="trash-2" class="w-6 h-6"></i></div>
+                            <h3 class="text-lg font-bold text-slate-900">Excluir Supermercado?</h3>
+                            <p class="text-xs text-slate-600">Remover "${esc(window.state.storeToDelete.name)}" do catálogo?</p>
+                            <div class="flex items-center gap-2 pt-2">
+                                <button onclick="window.closeModals()" class="flex-1 py-2.5 bg-slate-100 rounded-xl text-xs font-bold">Cancelar</button>
+                                <button onclick="window.confirmDeleteStore()" class="flex-1 py-2.5 bg-rose-600 text-white rounded-xl text-xs font-bold">Sim, Excluir</button>
+                            </div>
+                        </div>
+                    </div>
+                ` : ''}
+
+                ${window.state.isReviewModalOpen ? `
+                    <div class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+                        <div class="bg-white w-full max-w-2xl rounded-2xl shadow-xl overflow-hidden my-8 max-h-[90vh] flex flex-col">
+                            <div class="p-5 bg-emerald-800 text-white flex items-center justify-between">
+                                <h3 class="text-lg font-bold flex items-center gap-2"><i data-lucide="plus-circle" class="w-5 h-5 text-emerald-300"></i> Avaliar Loja</h3>
+                                <button onclick="window.closeModals()"><i data-lucide="x" class="w-5 h-5"></i></button>
+                            </div>
+                            <form onsubmit="window.submitReview(event); return false;" class="p-6 space-y-5 overflow-y-auto flex-1">
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-800 mb-1">Selecione a Loja *</label>
+                                    <select required onchange="state.reviewForm.storeId=this.value" class="w-full px-3 py-2.5 bg-white border border-slate-300 rounded-xl text-xs font-medium">
+                                        <option value="">-- Selecione --</option>
+                                        ${window.state.stores.map(s => `<option value="${s.id}" ${window.state.reviewForm.storeId === s.id ? 'selected' : ''}>${esc(s.name)} (${esc(s.address)})</option>`).join('')}
+                                    </select>
+                                </div>
+                                <div class="grid grid-cols-3 gap-3">
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-700 mb-1">Função</label>
+                                        <select onchange="state.reviewForm.role=this.value" class="w-full px-3 py-2 bg-slate-50 border rounded-xl text-xs">
+                                            <option value="Promotor de Vendas" ${window.state.reviewForm.role === 'Promotor de Vendas' ? 'selected' : ''}>Promotor de Vendas</option>
+                                            <option value="Repositor Extra" ${window.state.reviewForm.role === 'Repositor Extra' ? 'selected' : ''}>Repositor Extra</option>
+                                            <option value="Operador de Caixa" ${window.state.reviewForm.role === 'Operador de Caixa' ? 'selected' : ''}>Operador de Caixa</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-700 mb-1">Vínculo</label>
+                                        <select onchange="state.reviewForm.status=this.value" class="w-full px-3 py-2 bg-slate-50 border rounded-xl text-xs">
+                                            <option value="Atual" ${window.state.reviewForm.status === 'Atual' ? 'selected' : ''}>Atua Atualmente</option>
+                                            <option value="Ex-freelancer" ${window.state.reviewForm.status === 'Ex-freelancer' ? 'selected' : ''}>Já atuou</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-700 mb-1">Tempo</label>
+                                        <select onchange="state.reviewForm.period=this.value" class="w-full px-3 py-2 bg-slate-50 border rounded-xl text-xs">
+                                            <option value="1 a 6 meses" ${window.state.reviewForm.period === '1 a 6 meses' ? 'selected' : ''}>1 a 6 meses</option>
+                                            <option value="Mais de 6 meses" ${window.state.reviewForm.period === 'Mais de 6 meses' ? 'selected' : ''}>Mais de 6 meses</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="space-y-3 pt-2">
+                                    <div class="bg-amber-50 p-3 rounded-xl border border-amber-200">
+                                        <label class="text-xs font-bold block mb-1">Oferece café?</label>
+                                        <div class="grid grid-cols-2 gap-2">
+                                            <button type="button" onclick="state.reviewForm.coffee='SIM';render()" class="py-2 rounded-xl text-xs font-bold border ${window.state.reviewForm.coffee === 'SIM' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-700'}">SIM</button>
+                                            <button type="button" onclick="state.reviewForm.coffee='NÃO';render()" class="py-2 rounded-xl text-xs font-bold border ${window.state.reviewForm.coffee === 'NÃO' ? 'bg-rose-600 text-white border-rose-600' : 'bg-white text-slate-700'}">NÃO</button>
+                                        </div>
+                                    </div>
+                                    <div class="bg-orange-50 p-3 rounded-xl border border-orange-200">
+                                        <label class="text-xs font-bold block mb-1">Oferece almoço?</label>
+                                        <div class="grid grid-cols-2 gap-2">
+                                            <button type="button" onclick="state.reviewForm.lunch='SIM';render()" class="py-2 rounded-xl text-xs font-bold border ${window.state.reviewForm.lunch === 'SIM' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-700'}">SIM</button>
+                                            <button type="button" onclick="state.reviewForm.lunch='NÃO';render()" class="py-2 rounded-xl text-xs font-bold border ${window.state.reviewForm.lunch === 'NÃO' ? 'bg-rose-600 text-white border-rose-600' : 'bg-white text-slate-700'}">NÃO</button>
+                                        </div>
+                                    </div>
+                                    <div class="bg-purple-50 p-3 rounded-xl border border-purple-200">
+                                        <label class="text-xs font-bold block mb-1">Tem micro-ondas?</label>
+                                        <div class="grid grid-cols-2 gap-2">
+                                            <button type="button" onclick="state.reviewForm.microwave='SIM';render()" class="py-2 rounded-xl text-xs font-bold border ${window.state.reviewForm.microwave === 'SIM' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-700'}">SIM</button>
+                                            <button type="button" onclick="state.reviewForm.microwave='NÃO';render()" class="py-2 rounded-xl text-xs font-bold border ${window.state.reviewForm.microwave === 'NÃO' ? 'bg-rose-600 text-white border-rose-600' : 'bg-white text-slate-700'}">NÃO</button>
+                                        </div>
+                                    </div>
+                                    <div class="bg-indigo-50 p-3 rounded-xl border border-indigo-200">
+                                        <label class="text-xs font-bold block mb-1">Respeita pausa no tempo certo?</label>
+                                        <div class="grid grid-cols-2 gap-2">
+                                            <button type="button" onclick="state.reviewForm.breakTime='SIM';render()" class="py-2 rounded-xl text-xs font-bold border ${window.state.reviewForm.breakTime === 'SIM' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-700'}">SIM</button>
+                                            <button type="button" onclick="state.reviewForm.breakTime='NÃO';render()" class="py-2 rounded-xl text-xs font-bold border ${window.state.reviewForm.breakTime === 'NÃO' ? 'bg-rose-600 text-white border-rose-600' : 'bg-white text-slate-700'}">NÃO</button>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="text-xs font-bold block mb-1">Gestão flexível (1 a 5): <span id="flexLabel" class="text-blue-600">${window.state.reviewForm.flexibility}</span></label>
+                                        <input type="range" min="1" max="5" value="${window.state.reviewForm.flexibility}" oninput="state.reviewForm.flexibility=this.value;document.getElementById('flexLabel').textContent=this.value" class="w-full accent-blue-600"/>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-700 mb-1">Depoimento *</label>
+                                        <textarea required rows="3" oninput="state.reviewForm.comment=this.value" placeholder="Descreva a rotina..." class="w-full px-3 py-2 bg-slate-50 border rounded-xl text-xs">${esc(window.state.reviewForm.comment)}</textarea>
+                                    </div>
+                                    <div class="flex items-center justify-between bg-slate-100 p-3 rounded-xl">
+                                        <span class="text-xs font-bold">Publicar de forma Anônima?</span>
+                                        <input type="checkbox" ${window.state.reviewForm.isAnonymous ? 'checked' : ''} onchange="state.reviewForm.isAnonymous=this.checked" class="w-4 h-4 accent-emerald-600"/>
+                                    </div>
+                                </div>
+                                <div class="pt-3 border-t flex justify-end gap-3">
+                                    <button type="button" onclick="window.closeModals()" class="px-4 py-2 text-slate-600 text-xs font-bold">Cancelar</button>
+                                    <button type="submit" class="px-5 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold">Publicar Avaliação</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                ` : ''}
+
+                ${window.state.selectedStoreDetail ? `
+                    <div class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+                        <div class="bg-white w-full max-w-3xl rounded-2xl shadow-xl overflow-hidden my-8 max-h-[90vh] flex flex-col">
+                            <div class="p-5 bg-slate-900 text-white flex items-center justify-between">
+                                <div>
+                                    <span class="text-[10px] font-extrabold uppercase text-emerald-400 bg-emerald-950 px-2 py-0.5 rounded border border-emerald-800">${esc(window.state.selectedStoreDetail.category)}</span>
+                                    <h3 class="text-lg font-bold pt-1">${esc(window.state.selectedStoreDetail.name)}</h3>
+                                    <p class="text-xs text-slate-400"><i data-lucide="map-pin" class="w-3.5 h-3.5 inline text-emerald-400"></i> ${esc(window.state.selectedStoreDetail.address)}</p>
+                                </div>
+                                <button onclick="window.closeModals()"><i data-lucide="x" class="w-5 h-5"></i></button>
+                            </div>
+                            <div class="p-6 space-y-6 overflow-y-auto flex-1">
+                                <div class="space-y-3">
+                                    <h4 class="text-xs font-extrabold uppercase text-slate-500">Depoimentos (${window.state.selectedStoreDetail.reviews.length})</h4>
+                                    ${window.state.selectedStoreDetail.reviews.length === 0 ? '<p class="text-xs text-slate-400 italic">Nenhum depoimento ainda.</p>' : window.state.selectedStoreDetail.reviews.map(r => `
+                                        <div class="bg-slate-50 p-4 rounded-xl border space-y-2 text-xs">
+                                            <div class="flex items-center justify-between border-b pb-2">
+                                                <span class="font-bold text-slate-800">${esc(r.userName)} <span class="text-[10px] bg-slate-200 px-2 py-0.5 rounded">${esc(r.role)} • ${esc(r.status)}</span></span>
+                                                <span class="text-[10px] text-slate-400">${esc(r.date)}</span>
+                                            </div>
+                                            <div class="flex gap-2 text-[11px] flex-wrap">
+                                                <span class="px-2 py-0.5 rounded font-bold ${r.coffee === 'SIM' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}">Café: ${r.coffee}</span>
+                                                <span class="px-2 py-0.5 rounded font-bold ${r.lunch === 'SIM' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}">Almoço: ${r.lunch}</span>
+                                                <span class="px-2 py-0.5 rounded font-bold ${r.microwave === 'SIM' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}">Micro-ondas: ${r.microwave}</span>
+                                                <span class="px-2 py-0.5 rounded font-bold ${r.breakTime === 'SIM' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}">Pausa: ${r.breakTime}</span>
+                                            </div>
+                                            <p class="text-slate-700">${esc(r.comment)}</p>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                            <div class="p-4 bg-slate-50 border-t flex justify-end">
+                                <button onclick="window.closeModals()" class="px-5 py-2 bg-slate-200 text-slate-800 rounded-xl text-xs font-bold">Fechar</button>
+                            </div>
+                        </div>
+                    </div>
+                ` : ''}
+
+                <footer class="bg-slate-900 text-slate-400 text-xs py-6 border-t border-slate-800">
+                    <div class="max-w-7xl mx-auto px-4 text-center space-y-2">
+                        <p class="font-semibold text-slate-300">FreeEval Supermercados © 2026 — Plataforma Colaborativa</p>
+                    </div>
+                </footer>
+            `;
+
+            lucide.createIcons();
+        }
+        window.render = render;
+
+        window.setCategory = (cat) => { window.state.selectedCategory = cat; render(); };
+        window.setSearch = (val) => { window.state.searchTerm = val; render(); const el = document.getElementById('searchInput'); if (el) { el.focus(); el.setSelectionRange(val.length, val.length); } };
+        window.setSort = (val) => { window.state.sortBy = val; render(); };
+        window.openAuthModal = () => { window.state.isAuthModalOpen = true; render(); };
+        window.openAddStore = () => { if(window.state.userRole !== 'ADMIN') { showToast('Apenas o administrador pode cadastrar lojas.'); return; } window.state.isAddStoreModalOpen = true; render(); };
+        window.openReviewModal = () => { window.state.isReviewModalOpen = true; render(); };
+        window.openReviewModalFor = (id) => { window.state.reviewForm.storeId = id; window.state.isReviewModalOpen = true; render(); };
+        window.openDetail = (id) => { window.state.selectedStoreDetail = window.state.stores.find(s => s.id === id); render(); };
+        window.openEditStore = (id) => { window.state.editingStore = JSON.parse(JSON.stringify(window.state.stores.find(s => s.id === id))); window.state.isEditStoreModalOpen = true; render(); };
+        window.openDeleteStore = (id) => { window.state.storeToDelete = window.state.stores.find(s => s.id === id); render(); };
+        window.closeModals = () => {
+            window.state.isAuthModalOpen = false;
+            window.state.isAddStoreModalOpen = false;
+            window.state.isEditStoreModalOpen = false;
+            window.state.isReviewModalOpen = false;
+            window.state.selectedStoreDetail = null;
+            window.state.storeToDelete = null;
+            render();
+        };
+
+        render();
+    </script>
+</body>
+</html>
