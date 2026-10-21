@@ -1,521 +1,856 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>FreelaRank – Serviços e avaliações de lojas</title>
-  <meta name="description" content="Encontre serviços de freelancer e descubra quais lojas são boas (ou ruins) para trabalhar.">
-  <style>
-:root {
-  --bg: #f6f7fb;
-  --surface: #ffffff;
-  --text: #1c2030;
-  --muted: #6b7289;
-  --primary: #4f46e5;
-  --primary-dark: #3d35c4;
-  --good: #16a34a;
-  --bad: #dc2626;
-  --border: #e3e6f0;
-  --radius: 12px;
-  --shadow: 0 2px 10px rgba(20, 24, 50, .06);
-}
-
-* { box-sizing: border-box; }
-html { scroll-behavior: smooth; scroll-padding-top: 70px; }
-body {
-  margin: 0;
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  background: var(--bg);
-  color: var(--text);
-  line-height: 1.5;
-}
-.container { width: min(1100px, 92%); margin: 0 auto; }
-.hidden { display: none !important; }
-.muted { color: var(--muted); }
-.good { color: var(--good); }
-.bad { color: var(--bad); }
-
-/* Topbar */
-.topbar { position: sticky; top: 0; z-index: 10; background: var(--surface); border-bottom: 1px solid var(--border); }
-.topbar__inner { display: flex; justify-content: space-between; align-items: center; height: 60px; }
-.logo { font-weight: 800; font-size: 1.3rem; color: var(--text); text-decoration: none; }
-.logo span { color: var(--primary); }
-.nav { display: flex; gap: 1.2rem; }
-.nav a { color: var(--muted); text-decoration: none; font-weight: 500; }
-.nav a:hover { color: var(--primary); }
-
-/* Hero */
-.hero { background: linear-gradient(135deg, #4f46e5, #7c3aed); color: #fff; padding: 64px 0 48px; }
-.hero h1 { margin: 0 0 .6rem; font-size: clamp(1.7rem, 4vw, 2.6rem); max-width: 18em; }
-.hero p { margin: 0 0 1.5rem; max-width: 40em; opacity: .92; }
-.hero__stats { display: flex; gap: 1rem; flex-wrap: wrap; }
-.stat { background: rgba(255,255,255,.15); padding: .7rem 1.2rem; border-radius: var(--radius); }
-.stat strong { display: block; font-size: 1.5rem; }
-
-/* Sections */
-.section { padding: 48px 0; }
-.section--alt { background: #eef0f8; }
-.section h2 { margin: 0 0 1rem; }
-.section__head { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; }
-.section__head h2 { margin: 0; }
-
-/* Components */
-.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.2rem; box-shadow: var(--shadow); }
-.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; margin-top: 1rem; }
-.cards--single { grid-template-columns: 1fr; }
-.btn { border: 1px solid var(--border); background: var(--surface); color: var(--text); padding: .6rem 1rem; border-radius: 8px; font: inherit; font-weight: 600; cursor: pointer; }
-.btn:hover { border-color: var(--primary); color: var(--primary); }
-.btn--primary { background: var(--primary); border-color: var(--primary); color: #fff; }
-.btn--primary:hover { background: var(--primary-dark); color: #fff; }
-.link { background: none; border: 0; color: var(--primary); cursor: pointer; text-decoration: underline; font: inherit; }
-
-.tag { display: inline-block; background: #eceafd; color: var(--primary); font-size: .78rem; font-weight: 600; padding: .15rem .6rem; border-radius: 99px; }
-.service h3 { margin: .5rem 0 .3rem; font-size: 1.1rem; }
-.service p { margin: 0 0 .8rem; color: var(--muted); }
-.service__meta { display: flex; justify-content: space-between; align-items: center; gap: .5rem; flex-wrap: wrap; font-size: .9rem; }
-.price { font-weight: 700; color: var(--good); }
-.empty { color: var(--muted); padding: 1rem 0; }
-
-/* Forms */
-.form { display: grid; gap: 1rem; margin-bottom: 1rem; }
-.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; }
-label { display: grid; gap: .3rem; font-weight: 600; font-size: .9rem; }
-input, select, textarea {
-  font: inherit; padding: .55rem .7rem; border: 1px solid var(--border); border-radius: 8px; background: #fff; color: var(--text); width: 100%;
-}
-input:focus, select:focus, textarea:focus { outline: 2px solid var(--primary); outline-offset: 0; border-color: transparent; }
-fieldset { border: 1px solid var(--border); border-radius: 8px; padding: .8rem; }
-legend { font-weight: 600; font-size: .9rem; padding: 0 .4rem; }
-.newstore { border: 1px dashed var(--border); border-radius: 8px; padding: .7rem; }
-.newstore summary { cursor: pointer; color: var(--primary); font-weight: 600; }
-.newstore .grid { margin: .8rem 0; }
-.filters { display: flex; gap: .8rem; flex-wrap: wrap; }
-.filters input { flex: 1 1 220px; }
-.filters select { flex: 0 1 220px; }
-
-/* Ranking */
-.ranking { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1rem; margin-top: 1rem; }
-.rank-list { list-style: none; margin: 1rem 0 0; padding: 0; display: grid; gap: .6rem; counter-reset: r; }
-.rank-list li { counter-increment: r; display: flex; align-items: center; gap: .8rem; padding: .6rem .8rem; border: 1px solid var(--border); border-radius: 8px; }
-.rank-list li::before { content: counter(r); font-weight: 800; width: 1.8rem; height: 1.8rem; border-radius: 50%; display: grid; place-items: center; background: #eceafd; color: var(--primary); flex: none; }
-.rank-list .info { flex: 1; min-width: 0; }
-.rank-list .info strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.rank-list .info small { color: var(--muted); }
-.score { font-weight: 800; font-size: 1.1rem; }
-.score--good { color: var(--good); }
-.score--bad { color: var(--bad); }
-.score--mid { color: #d97706; }
-
-/* Reviews */
-.two-col { display: grid; grid-template-columns: 1.1fr 1fr; gap: 1.5rem; align-items: start; }
-.review header { display: flex; justify-content: space-between; gap: .5rem; align-items: baseline; }
-.stars { color: #f59e0b; letter-spacing: 1px; white-space: nowrap; }
-.review p { margin: .5rem 0; }
-.review small { color: var(--muted); }
-.crit { display: flex; gap: .4rem; flex-wrap: wrap; margin-top: .4rem; }
-.crit span { font-size: .75rem; background: #f1f2f8; padding: .1rem .5rem; border-radius: 6px; color: var(--muted); }
-
-.footer { text-align: center; padding: 2rem 0; color: var(--muted); font-size: .9rem; }
-
-.toast { position: fixed; bottom: 20px; left: 50%; transform: translate(-50%, 30px); background: #1c2030; color: #fff; padding: .7rem 1.2rem; border-radius: 8px; opacity: 0; pointer-events: none; transition: .25s; }
-.toast.show { opacity: 1; transform: translate(-50%, 0); }
-
-@media (max-width: 800px) {
-  .two-col { grid-template-columns: 1fr; }
-  .nav { gap: .8rem; font-size: .9rem; }
-}
-
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Freelancer Seguro</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
 </head>
-<body>
+<body class="min-h-screen bg-slate-100 text-slate-800 flex flex-col">
 
-<header class="topbar">
-  <div class="container topbar__inner">
-    <a href="#inicio" class="logo">Freela<span>Rank</span></a>
-    <nav class="nav">
-      <a href="#servicos">Serviços</a>
-      <a href="#ranking">Ranking</a>
-      <a href="#avaliar">Avaliar loja</a>
-    </nav>
-  </div>
-</header>
+    <div id="root" class="flex flex-col min-h-screen"></div>
 
-<main>
-  <section class="hero" id="inicio">
-    <div class="container">
-      <h1>Trabalhe como freelancer sabendo onde está pisando</h1>
-      <p>Publique e encontre serviços de freelancer, avalie as lojas para quem você trabalhou e veja o ranking das melhores e das piores.</p>
-      <div class="hero__stats" id="stats"></div>
-    </div>
-  </section>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, onSnapshot, doc, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-  <!-- SERVIÇOS -->
-  <section class="section" id="servicos">
-    <div class="container">
-      <div class="section__head">
-        <h2>Serviços de freelancer</h2>
-        <button class="btn" id="toggleServiceForm" type="button">+ Publicar serviço</button>
-      </div>
+        // Cole aqui a configuração do SEU projeto Firebase para ter login Google e dados compartilhados.
+        // Com tudo vazio, o site funciona em modo local (dados salvos só neste navegador).
+        const firebaseConfig = {
+            apiKey: "",
+            authDomain: "",
+            projectId: "",
+            storageBucket: "",
+            messagingSenderId: "",
+            appId: ""
+        };
 
-      <form id="serviceForm" class="card form hidden">
-        <div class="grid">
-          <label>Título
-            <input name="title" required maxlength="80" placeholder="Ex.: Criação de logotipo">
-          </label>
-          <label>Categoria
-            <select name="category" required></select>
-          </label>
-          <label>Valor (R$)
-            <input name="price" type="number" min="0" step="0.01" placeholder="Deixe vazio p/ a combinar">
-          </label>
-          <label>Loja / empresa (opcional)
-            <select name="storeId"><option value="">— Nenhuma —</option></select>
-          </label>
-          <label>Contato (e-mail ou WhatsApp)
-            <input name="contact" required maxlength="80">
-          </label>
-        </div>
-        <label>Descrição
-          <textarea name="desc" rows="3" required maxlength="500" placeholder="Descreva o serviço, prazo e requisitos"></textarea>
-        </label>
-        <button class="btn btn--primary" type="submit">Publicar</button>
-      </form>
+        const firebaseReady = Boolean(firebaseConfig.apiKey);
+        const app = firebaseReady ? initializeApp(firebaseConfig) : null;
+        const auth = firebaseReady ? getAuth(app) : null;
+        const db = firebaseReady ? getFirestore(app) : null;
+        const appId = 'freeeval-supermercados';
 
-      <div class="filters">
-        <input id="searchService" type="search" placeholder="Buscar serviço...">
-        <select id="filterCategory"></select>
-      </div>
+        const LOCAL_STORAGE_KEY = 'freeeval_stores_v9';
+        const AUTHORIZED_ADMIN_EMAIL = 'admin@freeeval.com';
 
-      <div id="serviceList" class="cards"></div>
-    </div>
-  </section>
+        const DEFAULT_INITIAL_STORES = [
+            {
+                id: 'store_1',
+                name: 'Supermercados BH - Savassi',
+                neighborhood: 'Savassi',
+                address: 'Av. do Contorno, 6000 - Bairro Savassi - Belo Horizonte, MG',
+                category: 'Supermercado',
+                registeredBy: 'Administrador',
+                stats: {
+                    coffee: { yes: 39, no: 3 },
+                    lunch: { yes: 40, no: 2 },
+                    microwave: { yes: 35, no: 7 },
+                    breakTime: { yes: 41, no: 1 },
+                    flexibility: 4.8
+                },
+                reviews: [
+                    {
+                        id: 'r1',
+                        role: 'Promotor de Vendas',
+                        status: 'Atual',
+                        period: '6 meses',
+                        isAnonymous: false,
+                        userName: 'Carlos Eduardo M.',
+                        date: 'Há 2 dias',
+                        rating: 5,
+                        coffee: 'SIM',
+                        lunch: 'SIM',
+                        microwave: 'SIM',
+                        breakTime: 'SIM',
+                        flexibility: 5,
+                        comment: 'Excelente loja para trabalhar! O refeitório conta com micro-ondas em bom estado e café nos dois turnos.'
+                    }
+                ]
+            },
+            {
+                id: 'store_2',
+                name: 'Supernosso - Belvedere',
+                neighborhood: 'Belvedere',
+                address: 'Av. Luiz Paulo Franco, 400 - Bairro Belvedere - Belo Horizonte, MG',
+                category: 'Gourmet',
+                registeredBy: 'Administrador',
+                stats: {
+                    coffee: { yes: 19, no: 1 },
+                    lunch: { yes: 18, no: 2 },
+                    microwave: { yes: 19, no: 1 },
+                    breakTime: { yes: 19, no: 1 },
+                    flexibility: 4.9
+                },
+                reviews: [
+                    {
+                        id: 'r2',
+                        role: 'Promotor de Bebidas',
+                        status: 'Atual',
+                        period: '1 ano',
+                        isAnonymous: false,
+                        userName: 'Aline Souza',
+                        date: 'Ontem',
+                        rating: 5,
+                        coffee: 'SIM',
+                        lunch: 'SIM',
+                        microwave: 'SIM',
+                        breakTime: 'SIM',
+                        flexibility: 5,
+                        comment: 'A melhor loja da região! Tratam o pessoal terceirizado com respeito e o espaço de descanso é ótimo.'
+                    }
+                ]
+            }
+        ];
 
-  <!-- RANKING -->
-  <section class="section section--alt" id="ranking">
-    <div class="container">
-      <h2>Ranking de lojas</h2>
-      <p class="muted">A nota considera a média das avaliações e o número de avaliações (lojas com poucas avaliações pesam menos).</p>
-      <div class="ranking">
-        <div class="card">
-          <h3 class="good">🏆 Melhores para trabalhar</h3>
-          <ol id="bestList" class="rank-list"></ol>
-        </div>
-        <div class="card">
-          <h3 class="bad">⚠️ Piores — evite</h3>
-          <ol id="worstList" class="rank-list"></ol>
-        </div>
-      </div>
-    </div>
-  </section>
+        window.state = {
+            user: null,
+            userRole: 'FREELANCER',
+            searchTerm: '',
+            selectedCategory: 'ALL',
+            sortBy: 'RATING',
+            stores: (() => {
+                try {
+                    const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
+                    if (saved) return JSON.parse(saved).filter(s => /^[\w-]+$/.test(s.id));
+                } catch(e) {}
+                return DEFAULT_INITIAL_STORES;
+            })(),
+            selectedStoreDetail: null,
+            isReviewModalOpen: false,
+            isAddStoreModalOpen: false,
+            isEditStoreModalOpen: false,
+            isAuthModalOpen: false,
+            editingStore: null,
+            storeToDelete: null,
+            toastMsg: '',
+            reviewForm: {
+                storeId: '',
+                role: 'Promotor de Vendas',
+                status: 'Atual',
+                period: '1 a 6 meses',
+                isAnonymous: false,
+                rating: 5,
+                coffee: 'SIM',
+                lunch: 'SIM',
+                microwave: 'SIM',
+                breakTime: 'SIM',
+                flexibility: 5,
+                comment: ''
+            },
+            newStoreForm: {
+                name: '',
+                neighborhood: '',
+                address: '',
+                category: 'Supermercado',
+                cityState: 'Belo Horizonte, MG'
+            }
+        };
 
-  <!-- AVALIAR -->
-  <section class="section" id="avaliar">
-    <div class="container">
-      <h2>Avaliar uma loja</h2>
-      <div class="two-col">
-        <form id="reviewForm" class="card form">
-          <label>Loja
-            <select name="storeId" id="reviewStore" required></select>
-          </label>
-          <details class="newstore">
-            <summary>Minha loja não está na lista</summary>
-            <div class="grid">
-              <label>Nome da loja
-                <input id="newStoreName" maxlength="60">
-              </label>
-              <label>Site / rede social (opcional)
-                <input id="newStoreSite" maxlength="100">
-              </label>
-            </div>
-            <button type="button" class="btn" id="addStoreBtn">Adicionar loja</button>
-          </details>
+        function showToast(msg) {
+            window.state.toastMsg = msg;
+            render();
+            setTimeout(() => {
+                window.state.toastMsg = '';
+                render();
+            }, 3500);
+        }
+        window.showToast = showToast;
 
-          <fieldset>
-            <legend>Notas (1 a 5)</legend>
-            <div class="grid">
-              <label>Pagamento em dia <select name="pay"></select></label>
-              <label>Comunicação <select name="comm"></select></label>
-              <label>Clareza do briefing <select name="brief"></select></label>
-              <label>Respeito aos prazos <select name="deadline"></select></label>
-            </div>
-          </fieldset>
+        if (firebaseReady) {
+        signInAnonymously(auth).catch(() => {});
+        onAuthStateChanged(auth, (u) => {
+            if (u && !u.isAnonymous) {
+                window.state.user = u;
+                if (u.email === AUTHORIZED_ADMIN_EMAIL) {
+                    window.state.userRole = 'ADMIN';
+                } else {
+                    window.state.userRole = 'FREELANCER';
+                }
+            } else {
+                window.state.userRole = 'FREELANCER';
+            }
+            render();
+        });
+        }
 
-          <label>Seu nome ou apelido
-            <input name="author" maxlength="40" placeholder="Anônimo">
-          </label>
-          <label>Comentário
-            <textarea name="comment" rows="3" required maxlength="500" placeholder="Conte sua experiência de forma respeitosa e factual"></textarea>
-          </label>
-          <button class="btn btn--primary" type="submit">Enviar avaliação</button>
-        </form>
+        try {
+            if (firebaseReady) onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'stores'), (snapshot) => {
+                if (snapshot && !snapshot.empty) {
+                    const loaded = snapshot.docs.map(d => ({ id: d.id, ...d.data() })).filter(s => !s._deleted && /^[\w-]+$/.test(s.id));
+                    window.state.stores = loaded;
+                    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(loaded));
+                    render();
+                }
+            }, () => {});
+        } catch(e) {}
 
-        <div>
-          <h3>Últimas avaliações</h3>
-          <div id="reviewList" class="cards cards--single"></div>
-        </div>
-      </div>
-    </div>
-  </section>
-</main>
+        const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
-<footer class="footer">
-  <div class="container">
-    <p>FreelaRank © <span id="year"></span> — Avaliações são opiniões dos usuários. Seja honesto e respeitoso.</p>
-    <button class="link" id="resetData" type="button">Restaurar dados de exemplo</button>
-  </div>
-</footer>
+        function calculateScore(stats) {
+            const safeStats = stats || {};
+            const getRatio = (item) => {
+                const sub = item || { yes: 0, no: 0 };
+                const total = (sub.yes || 0) + (sub.no || 0);
+                if (total === 0) return 3;
+                return ((sub.yes || 0) / total) * 5;
+            };
+            const c = getRatio(safeStats.coffee);
+            const l = getRatio(safeStats.lunch);
+            const m = getRatio(safeStats.microwave);
+            const b = getRatio(safeStats.breakTime);
+            const f = safeStats.flexibility || 3;
+            return Number(((c * 0.15) + (l * 0.15) + (m * 0.15) + (b * 0.25) + (f * 0.30)).toFixed(1));
+        }
 
-<div id="toast" class="toast" role="status" aria-live="polite"></div>
-<script>
-(() => {
-  'use strict';
+        function getMajority(item) {
+            const sub = item || { yes: 0, no: 0 };
+            const yes = sub.yes || 0;
+            const no = sub.no || 0;
+            if (yes === 0 && no === 0) return 'SIM';
+            return yes >= no ? 'SIM' : 'NÃO';
+        }
 
-  const KEY = 'freelarank:v1';
-  const CATEGORIES = ['Design', 'Programação', 'Redação', 'Marketing', 'Vídeo e áudio', 'Tradução', 'Suporte', 'Outros'];
-  const CRITERIA = { pay: 'Pagamento', comm: 'Comunicação', brief: 'Briefing', deadline: 'Prazos' };
-  // Parâmetros do ranking (média bayesiana): evita que 1 avaliação isolada domine
-  const PRIOR_MEAN = 3;
-  const PRIOR_WEIGHT = 2;
+        function getBadge(score, count) {
+            if (count === 0) return { label: 'Sem Avaliações', bg: 'bg-slate-100', text: 'text-slate-600', border: 'border-slate-300' };
+            if (score >= 4.0) return { label: 'Melhor Loja (Excelente)', bg: 'bg-emerald-100', text: 'text-emerald-800', border: 'border-emerald-300' };
+            if (score >= 2.5) return { label: 'Loja Média (Regular)', bg: 'bg-amber-100', text: 'text-amber-800', border: 'border-amber-300' };
+            return { label: 'Pior Loja (Atenção)', bg: 'bg-rose-100', text: 'text-rose-800', border: 'border-rose-300' };
+        }
 
-  const $ = (s) => document.querySelector(s);
-  const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+        window.handleGoogleLogin = async () => {
+            if (!firebaseReady) {
+                window.state.user = { uid: 'demo_user', displayName: 'Modo demonstração', email: AUTHORIZED_ADMIN_EMAIL };
+                window.state.userRole = 'ADMIN';
+                window.state.isAuthModalOpen = false;
+                showToast('Modo demonstração: administrador local ativado.');
+                render();
+                return;
+            }
+            try {
+                const provider = new GoogleAuthProvider();
+                const res = await signInWithPopup(auth, provider);
+                window.state.user = res.user;
+                
+                if (res.user.email === AUTHORIZED_ADMIN_EMAIL) {
+                    window.state.userRole = 'ADMIN';
+                    showToast('Logado como Administrador!');
+                } else {
+                    window.state.userRole = 'FREELANCER';
+                    showToast('Login realizado com sucesso!');
+                }
 
-  // ---------- Dados ----------
-  const seed = () => ({
-    stores: [
-      { id: 's1', name: 'PixelCraft Studio', site: 'pixelcraft.example' },
-      { id: 's2', name: 'LojaMax Digital', site: 'lojamax.example' },
-      { id: 's3', name: 'Rápido Print', site: 'rapidoprint.example' },
-      { id: 's4', name: 'Verde Cosméticos', site: 'verdecosmeticos.example' }
-    ],
-    services: [
-      { id: 'v1', title: 'Criação de logotipo', category: 'Design', price: 250, desc: 'Logo com 3 propostas e arquivos editáveis. Prazo de 5 dias.', contact: 'contato@exemplo.com', storeId: 's1', date: Date.now() - 86400000 * 2 },
-      { id: 'v2', title: 'Landing page responsiva', category: 'Programação', price: 600, desc: 'HTML, CSS e JS puros, rápida e otimizada para SEO.', contact: '(31) 90000-0000', storeId: '', date: Date.now() - 86400000 },
-      { id: 'v3', title: 'Redação de posts para blog', category: 'Redação', price: 80, desc: 'Textos de 800 palavras, com pesquisa de palavra-chave.', contact: 'redacao@exemplo.com', storeId: 's4', date: Date.now() }
-    ],
-    reviews: [
-      { id: 'r1', storeId: 's1', author: 'Marina', pay: 5, comm: 5, brief: 4, deadline: 5, comment: 'Pagamento sempre no prazo e briefing claro.', date: Date.now() - 86400000 * 5 },
-      { id: 'r2', storeId: 's1', author: 'Caio', pay: 5, comm: 4, brief: 5, deadline: 4, comment: 'Ótima comunicação, recomendo.', date: Date.now() - 86400000 * 4 },
-      { id: 'r3', storeId: 's2', author: 'Anônimo', pay: 1, comm: 2, brief: 2, deadline: 1, comment: 'Atrasaram o pagamento por semanas e mudaram o escopo várias vezes.', date: Date.now() - 86400000 * 3 },
-      { id: 'r4', storeId: 's2', author: 'Lucas', pay: 2, comm: 1, brief: 2, deadline: 2, comment: 'Difícil de falar com eles, sumiram após a entrega.', date: Date.now() - 86400000 * 2 },
-      { id: 'r5', storeId: 's3', author: 'Bia', pay: 3, comm: 3, brief: 3, deadline: 4, comment: 'Razoável, nada demais.', date: Date.now() - 86400000 },
-      { id: 'r6', storeId: 's4', author: 'João', pay: 4, comm: 5, brief: 4, deadline: 4, comment: 'Equipe atenciosa e pagamento ok.', date: Date.now() - 3600000 }
-    ]
-  });
+                window.state.isAuthModalOpen = false;
+                render();
+            } catch (err) {
+                showToast('Não foi possível entrar com o Google.');
+            }
+        };
 
-  let db = load();
+        window.handleSignOut = async () => {
+            if (auth) await signOut(auth).catch(() => {});
+            window.state.user = null;
+            window.state.userRole = 'FREELANCER';
+            showToast('Sessão encerrada.');
+            render();
+        };
 
-  function load() {
-    try {
-      const raw = localStorage.getItem(KEY);
-      if (raw) return JSON.parse(raw);
-    } catch (e) { /* ignora */ }
-    return seed();
-  }
-  function save() {
-    try { localStorage.setItem(KEY, JSON.stringify(db)); }
-    catch (e) { toast('Não foi possível salvar no navegador.'); }
-  }
+        window.saveNewStore = (e) => {
+            e.preventDefault();
+            if (window.state.userRole !== 'ADMIN') {
+                showToast('Apenas o administrador principal pode cadastrar lojas.');
+                return;
+            }
+            const f = window.state.newStoreForm;
+            if (!f.name || !f.name.trim()) {
+                showToast('Por favor, informe o nome do supermercado.');
+                return;
+            }
 
-  // ---------- Utilidades ----------
-  function esc(str) {
-    return String(str ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  }
-  const money = (v) => v === null || v === '' || v === undefined ? 'A combinar' : Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-  const fmtDate = (t) => new Date(t).toLocaleDateString('pt-BR');
-  const storeById = (id) => db.stores.find((s) => s.id === id);
-  const reviewAvg = (r) => (r.pay + r.comm + r.brief + r.deadline) / 4;
-  const stars = (n) => '★'.repeat(Math.round(n)) + '☆'.repeat(5 - Math.round(n));
+            const id = 'store_' + Date.now();
+            const fullAddress = [f.address.trim(), f.neighborhood ? `Bairro ${f.neighborhood}` : '', f.cityState].filter(Boolean).join(' - ') || 'Endereço não informado';
+            
+            const newObj = {
+                id,
+                name: f.name.trim(),
+                neighborhood: f.neighborhood.trim(),
+                address: fullAddress,
+                category: f.category || 'Supermercado',
+                registeredBy: 'Administrador',
+                stats: { 
+                    coffee: {yes:0, no:0}, 
+                    lunch: {yes:0, no:0}, 
+                    microwave: {yes:0, no:0},
+                    breakTime: {yes:0, no:0}, 
+                    flexibility: 5 
+                },
+                reviews: []
+            };
 
-  let toastTimer;
-  function toast(msg) {
-    const el = $('#toast');
-    el.textContent = msg;
-    el.classList.add('show');
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => el.classList.remove('show'), 2600);
-  }
+            window.state.stores = [newObj, ...window.state.stores];
+            try {
+                localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(window.state.stores));
+            } catch(err) {}
 
-  // ---------- Cálculo do ranking ----------
-  function storeStats() {
-    return db.stores.map((store) => {
-      const revs = db.reviews.filter((r) => r.storeId === store.id);
-      const count = revs.length;
-      const avg = count ? revs.reduce((a, r) => a + reviewAvg(r), 0) / count : 0;
-      const score = count ? (avg * count + PRIOR_MEAN * PRIOR_WEIGHT) / (count + PRIOR_WEIGHT) : 0;
-      return { store, count, avg, score };
-    }).filter((s) => s.count > 0);
-  }
+            try {
+                setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'stores', id), newObj);
+            } catch(err) {}
 
-  // ---------- Renderização ----------
-  function fillSelects() {
-    const catOptions = CATEGORIES.map((c) => `<option>${esc(c)}</option>`).join('');
-    document.querySelector('#serviceForm [name=category]').innerHTML = catOptions;
-    $('#filterCategory').innerHTML = '<option value="">Todas as categorias</option>' + catOptions;
+            window.state.isAddStoreModalOpen = false;
+            window.state.newStoreForm = { name: '', neighborhood: '', address: '', category: 'Supermercado', cityState: 'Belo Horizonte, MG' };
+            showToast('Loja cadastrada com sucesso!');
+            render();
+        };
 
-    const storeOpts = db.stores.map((s) => `<option value="${esc(s.id)}">${esc(s.name)}</option>`).join('');
-    document.querySelector('#serviceForm [name=storeId]').innerHTML = '<option value="">— Nenhuma —</option>' + storeOpts;
-    $('#reviewStore').innerHTML = '<option value="" disabled selected>Selecione...</option>' + storeOpts;
+        window.saveEditedStore = (e) => {
+            e.preventDefault();
+            if (window.state.userRole !== 'ADMIN' || !window.state.editingStore) return;
+            const ed = window.state.editingStore;
+            
+            window.state.stores = window.state.stores.map(st => st.id === ed.id ? ed : st);
+            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(window.state.stores));
+            try {
+                updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'stores', ed.id), {
+                    name: ed.name,
+                    neighborhood: ed.neighborhood,
+                    address: ed.address,
+                    category: ed.category
+                });
+            } catch(err) {}
 
-    const scale = [5, 4, 3, 2, 1].map((n) => `<option value="${n}">${n} – ${stars(n)}</option>`).join('');
-    Object.keys(CRITERIA).forEach((k) => {
-      const sel = document.querySelector(`#reviewForm [name=${k}]`);
-      sel.innerHTML = scale;
-      sel.value = '3';
-    });
-  }
+            window.state.isEditStoreModalOpen = false;
+            window.state.editingStore = null;
+            showToast('Loja atualizada com sucesso!');
+            render();
+        };
 
-  function renderStats() {
-    $('#stats').innerHTML = `
-      <div class="stat"><strong>${db.services.length}</strong>serviços</div>
-      <div class="stat"><strong>${db.stores.length}</strong>lojas</div>
-      <div class="stat"><strong>${db.reviews.length}</strong>avaliações</div>`;
-  }
+        window.confirmDeleteStore = () => {
+            const st = window.state.storeToDelete;
+            if (!st || window.state.userRole !== 'ADMIN') return;
 
-  function renderServices() {
-    const q = $('#searchService').value.trim().toLowerCase();
-    const cat = $('#filterCategory').value;
-    const list = db.services
-      .filter((s) => (!cat || s.category === cat) &&
-        (!q || (s.title + ' ' + s.desc).toLowerCase().includes(q)))
-      .sort((a, b) => b.date - a.date);
+            window.state.stores = window.state.stores.filter(s => s.id !== st.id);
+            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(window.state.stores));
+            try {
+                setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'stores', st.id), { _deleted: true }, { merge: true });
+            } catch(err) {}
 
-    $('#serviceList').innerHTML = list.length ? list.map((s) => {
-      const store = storeById(s.storeId);
-      return `
-      <article class="card service">
-        <span class="tag">${esc(s.category)}</span>
-        <h3>${esc(s.title)}</h3>
-        <p>${esc(s.desc)}</p>
-        <div class="service__meta">
-          <span class="price">${money(s.price)}</span>
-          <span>${store ? '🏬 ' + esc(store.name) : 'Autônomo'}</span>
-        </div>
-        <div class="service__meta"><small class="muted">📩 ${esc(s.contact)} · ${fmtDate(s.date)}</small></div>
-      </article>`;
-    }).join('') : '<p class="empty">Nenhum serviço encontrado.</p>';
-  }
+            window.state.storeToDelete = null;
+            window.state.selectedStoreDetail = null;
+            showToast('Loja excluída!');
+            render();
+        };
 
-  function scoreClass(score) {
-    return score >= 3.8 ? 'score--good' : score < 3 ? 'score--bad' : 'score--mid';
-  }
+        window.submitReview = (e) => {
+            if (e) e.preventDefault();
+            const rf = window.state.reviewForm;
+            if (!rf.storeId) {
+                showToast('Por favor, selecione uma loja para avaliar.');
+                return;
+            }
+            const target = window.state.stores.find(s => s.id === rf.storeId);
+            if (!target) {
+                showToast('Loja selecionada não encontrada.');
+                return;
+            }
 
-  function rankItem({ store, count, score }) {
-    return `<li>
-      <div class="info"><strong>${esc(store.name)}</strong><small>${count} avaliaç${count === 1 ? 'ão' : 'ões'}</small></div>
-      <span class="score ${scoreClass(score)}">${score.toFixed(2)}</span>
-    </li>`;
-  }
+            const newRev = {
+                id: 'rev_' + Date.now(),
+                role: rf.role,
+                status: rf.status,
+                period: rf.period,
+                isAnonymous: rf.isAnonymous,
+                userName: rf.isAnonymous ? 'Anônimo' : (window.state.user?.displayName || 'Freelancer'),
+                date: 'Agora mesmo',
+                rating: Number(rf.rating),
+                coffee: rf.coffee,
+                lunch: rf.lunch,
+                microwave: rf.microwave,
+                breakTime: rf.breakTime,
+                flexibility: Number(rf.flexibility),
+                comment: rf.comment
+            };
 
-  function renderRanking() {
-    const stats = storeStats();
-    const best = [...stats].sort((a, b) => b.score - a.score).filter((s) => s.score >= 3.5).slice(0, 5);
-    const worst = [...stats].sort((a, b) => a.score - b.score).filter((s) => s.score < 3).slice(0, 5);
-    $('#bestList').innerHTML = best.length ? best.map(rankItem).join('') : '<p class="empty">Ainda não há lojas bem avaliadas.</p>';
-    $('#worstList').innerHTML = worst.length ? worst.map(rankItem).join('') : '<p class="empty">Nenhuma loja com nota baixa por enquanto.</p>';
-  }
+            const tStats = target.stats || { 
+                coffee: {yes:0, no:0}, 
+                lunch: {yes:0, no:0}, 
+                microwave: {yes:0, no:0}, 
+                breakTime: {yes:0, no:0}, 
+                flexibility: 5 
+            };
 
-  function renderReviews() {
-    const list = [...db.reviews].sort((a, b) => b.date - a.date).slice(0, 8);
-    $('#reviewList').innerHTML = list.length ? list.map((r) => {
-      const store = storeById(r.storeId);
-      const avg = reviewAvg(r);
-      return `
-      <article class="card review">
-        <header><strong>${esc(store ? store.name : 'Loja removida')}</strong><span class="stars" title="${avg.toFixed(1)}">${stars(avg)}</span></header>
-        <p>${esc(r.comment)}</p>
-        <div class="crit">${Object.entries(CRITERIA).map(([k, label]) => `<span>${label}: ${r[k]}</span>`).join('')}</div>
-        <small>por ${esc(r.author || 'Anônimo')} · ${fmtDate(r.date)}</small>
-      </article>`;
-    }).join('') : '<p class="empty">Nenhuma avaliação ainda. Seja o primeiro!</p>';
-  }
+            const updatedStats = {
+                coffee: { yes: (tStats.coffee?.yes || 0) + (rf.coffee === 'SIM' ? 1 : 0), no: (tStats.coffee?.no || 0) + (rf.coffee === 'NÃO' ? 1 : 0) },
+                lunch: { yes: (tStats.lunch?.yes || 0) + (rf.lunch === 'SIM' ? 1 : 0), no: (tStats.lunch?.no || 0) + (rf.lunch === 'NÃO' ? 1 : 0) },
+                microwave: { yes: (tStats.microwave?.yes || 0) + (rf.microwave === 'SIM' ? 1 : 0), no: (tStats.microwave?.no || 0) + (rf.microwave === 'NÃO' ? 1 : 0) },
+                breakTime: { yes: (tStats.breakTime?.yes || 0) + (rf.breakTime === 'SIM' ? 1 : 0), no: (tStats.breakTime?.no || 0) + (rf.breakTime === 'NÃO' ? 1 : 0) },
+                flexibility: Number(((tStats.flexibility * (target.reviews?.length || 0) + Number(rf.flexibility)) / ((target.reviews?.length || 0) + 1)).toFixed(1))
+            };
 
-  function renderAll() {
-    renderStats();
-    renderServices();
-    renderRanking();
-    renderReviews();
-  }
+            const updatedStore = {
+                ...target,
+                stats: updatedStats,
+                reviews: [newRev, ...(target.reviews || [])]
+            };
 
-  // ---------- Eventos ----------
-  $('#toggleServiceForm').addEventListener('click', () => $('#serviceForm').classList.toggle('hidden'));
-  $('#searchService').addEventListener('input', renderServices);
-  $('#filterCategory').addEventListener('change', renderServices);
+            window.state.stores = window.state.stores.map(s => s.id === target.id ? updatedStore : s);
+            try {
+                localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(window.state.stores));
+            } catch(err) {}
 
-  $('#serviceForm').addEventListener('submit', (e) => {
-    e.preventDefault();
-    const f = new FormData(e.target);
-    db.services.push({
-      id: uid(),
-      title: f.get('title').trim(),
-      category: f.get('category'),
-      price: f.get('price') === '' ? null : Number(f.get('price')),
-      desc: f.get('desc').trim(),
-      contact: f.get('contact').trim(),
-      storeId: f.get('storeId'),
-      date: Date.now()
-    });
-    save();
-    e.target.reset();
-    e.target.classList.add('hidden');
-    renderAll();
-    toast('Serviço publicado!');
-  });
+            try {
+                setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'stores', target.id), updatedStore, { merge: true });
+            } catch(err) {}
 
-  $('#addStoreBtn').addEventListener('click', () => {
-    const name = $('#newStoreName').value.trim();
-    if (!name) return toast('Informe o nome da loja.');
-    if (db.stores.some((s) => s.name.toLowerCase() === name.toLowerCase())) {
-      return toast('Essa loja já existe na lista.');
-    }
-    const store = { id: uid(), name, site: $('#newStoreSite').value.trim() };
-    db.stores.push(store);
-    save();
-    fillSelects();
-    $('#reviewStore').value = store.id;
-    $('#newStoreName').value = '';
-    $('#newStoreSite').value = '';
-    renderStats();
-    toast('Loja adicionada. Agora é só avaliar.');
-  });
+            window.state.isReviewModalOpen = false;
+            window.state.reviewForm.comment = '';
+            showToast('Avaliação salva com sucesso!');
+            render();
+        };
 
-  $('#reviewForm').addEventListener('submit', (e) => {
-    e.preventDefault();
-    const f = new FormData(e.target);
-    if (!f.get('storeId')) return toast('Selecione uma loja.');
-    db.reviews.push({
-      id: uid(),
-      storeId: f.get('storeId'),
-      author: f.get('author').trim() || 'Anônimo',
-      pay: Number(f.get('pay')),
-      comm: Number(f.get('comm')),
-      brief: Number(f.get('brief')),
-      deadline: Number(f.get('deadline')),
-      comment: f.get('comment').trim(),
-      date: Date.now()
-    });
-    save();
-    e.target.reset();
-    fillSelects();
-    renderAll();
-    toast('Avaliação enviada. Obrigado!');
-  });
+        function render() {
+            const root = document.getElementById('root');
+            if (!root) return;
+            
+            const filtered = window.state.stores.map(st => {
+                const score = calculateScore(st.stats);
+                const badge = getBadge(score, st.reviews.length);
+                return { ...st, score, badge };
+            }).filter(st => {
+                const matchSearch = st.name.toLowerCase().includes(window.state.searchTerm.toLowerCase()) || st.address.toLowerCase().includes(window.state.searchTerm.toLowerCase());
+                let matchCat = true;
+                if (window.state.selectedCategory === 'BEST') matchCat = st.score >= 4.0;
+                else if (window.state.selectedCategory === 'MEDIUM') matchCat = st.score >= 2.5 && st.score < 4.0;
+                else if (window.state.selectedCategory === 'WORST') matchCat = st.score < 2.5;
+                return matchSearch && matchCat;
+            }).sort((a,b) => {
+                if (window.state.sortBy === 'RATING') return b.score - a.score;
+                if (window.state.sortBy === 'REVIEWS') return b.reviews.length - a.reviews.length;
+                return a.name.localeCompare(b.name);
+            });
 
-  $('#resetData').addEventListener('click', () => {
-    if (!confirm('Isso apaga seus dados locais e restaura os exemplos. Continuar?')) return;
-    db = seed();
-    save();
-    fillSelects();
-    renderAll();
-    toast('Dados restaurados.');
-  });
+            root.innerHTML = `
+                ${window.state.toastMsg ? `
+                    <div class="fixed top-4 right-4 z-50 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2 border border-slate-700">
+                        <i data-lucide="sparkles" class="w-4 h-4 text-emerald-400"></i>
+                        <span class="text-xs font-semibold">${window.state.toastMsg}</span>
+                    </div>
+                ` : ''}
 
-  // ---------- Início ----------
-  $('#year').textContent = new Date().getFullYear();
-  fillSelects();
-  renderAll();
-})();
+                <header class="bg-emerald-900 text-white shadow-lg sticky top-0 z-30">
+                    <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col items-center justify-center text-center gap-3">
+                        <div>
+                            <h1 class="text-xl font-black tracking-tight text-white">FreeEval Supermercados</h1>
+                            <p class="text-xs text-emerald-200">A comunidade colaborativa de freelancers para avaliar as condições das lojas</p>
+                        </div>
+                        <div class="flex items-center gap-2.5 flex-wrap justify-center">
+                            ${window.state.userRole === 'ADMIN' ? `
+                                <button onclick="window.openAddStore()" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold text-xs shadow-md transition flex items-center gap-1.5 whitespace-nowrap">
+                                    <i data-lucide="plus-circle" class="w-4 h-4"></i> Cadastrar Nova Loja
+                                </button>
+                            ` : ''}
+                            <button onclick="window.openReviewModal()" class="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold rounded-xl text-xs shadow-md transition flex items-center gap-1.5 whitespace-nowrap">
+                                <i data-lucide="plus-circle" class="w-4 h-4"></i> Avaliar Supermercado
+                            </button>
+                            ${window.state.user ? `
+                                <div class="flex items-center gap-3 bg-emerald-950/60 pl-3 pr-2 py-1.5 rounded-2xl border border-emerald-700/60 whitespace-nowrap">
+                                    <div class="text-right">
+                                        <div class="text-xs font-bold text-emerald-100">${esc(window.state.user.displayName || window.state.user.email)}</div>
+                                        <div class="text-[10px] text-emerald-300">${window.state.userRole === 'ADMIN' ? 'Administrador' : 'Freelancer'}</div>
+                                    </div>
+                                    <button onclick="window.handleSignOut()" class="p-1.5 bg-emerald-800 hover:bg-rose-700 text-white rounded-xl transition">
+                                        <i data-lucide="log-out" class="w-4 h-4"></i>
+                                    </button>
+                                </div>
+                            ` : `
+                                <button onclick="window.openAuthModal()" class="px-4 py-2 bg-white/10 hover:bg-white/20 text-white border border-emerald-600 rounded-xl font-bold text-xs transition flex items-center gap-2 whitespace-nowrap">
+                                    <i data-lucide="user" class="w-4 h-4 text-emerald-300"></i> Entrar com Google
+                                </button>
+                            `}
+                        </div>
+                    </div>
+                </header>
 
-</script>
+                <main class="max-w-7xl mx-auto px-4 py-8 flex-1 w-full space-y-6">
+                    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row gap-4 items-center justify-between">
+                        <div class="flex items-center gap-1.5 overflow-x-auto w-full md:w-auto pb-2 md:pb-0">
+                            <button onclick="window.setCategory('ALL')" class="px-3.5 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap ${window.state.selectedCategory === 'ALL' ? 'bg-emerald-800 text-white' : 'bg-slate-100 text-slate-600'}">
+                                Todas as Lojas (${window.state.stores.length})
+                            </button>
+                            <button onclick="window.setCategory('BEST')" class="px-3.5 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap ${window.state.selectedCategory === 'BEST' ? 'bg-emerald-600 text-white' : 'bg-emerald-50 text-emerald-800'}">
+                                Melhores
+                            </button>
+                            <button onclick="window.setCategory('MEDIUM')" class="px-3.5 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap ${window.state.selectedCategory === 'MEDIUM' ? 'bg-amber-500 text-white' : 'bg-amber-50 text-amber-800'}">
+                                Médias
+                            </button>
+                            <button onclick="window.setCategory('WORST')" class="px-3.5 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap ${window.state.selectedCategory === 'WORST' ? 'bg-rose-600 text-white' : 'bg-rose-50 text-rose-800'}">
+                                Piores
+                            </button>
+                        </div>
+                        <div class="flex items-center gap-3 w-full md:w-auto">
+                            <div class="relative flex-1 md:w-64">
+                                <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                                <input type="text" placeholder="Buscar loja ou bairro..." id="searchInput" value="${esc(window.state.searchTerm)}" oninput="window.setSearch(this.value)" class="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium"/>
+                            </div>
+                            <select onchange="window.setSort(this.value)" class="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700">
+                                <option value="RATING" ${window.state.sortBy === 'RATING' ? 'selected' : ''}>Maior Nota</option>
+                                <option value="REVIEWS" ${window.state.sortBy === 'REVIEWS' ? 'selected' : ''}>Mais Avaliadas</option>
+                                <option value="NAME" ${window.state.sortBy === 'NAME' ? 'selected' : ''}>Ordem Alfabética</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    ${filtered.length === 0 ? `
+                        <div class="bg-white rounded-2xl p-12 text-center border border-slate-200 space-y-3">
+                            <i data-lucide="alert-circle" class="w-10 h-10 text-slate-300 mx-auto"></i>
+                            <h3 class="text-base font-bold text-slate-700">Nenhum supermercado encontrado</h3>
+                        </div>
+                    ` : `
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            ${filtered.map(st => {
+                                const stStats = st.stats || {};
+                                const coffeeVal = getMajority(stStats.coffee);
+                                const lunchVal = getMajority(stStats.lunch);
+                                const micVal = getMajority(stStats.microwave);
+                                const breakVal = getMajority(stStats.breakTime);
+                                return `
+                                    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition overflow-hidden flex flex-col">
+                                        <div class="p-5 border-b border-slate-100 flex items-start justify-between gap-3">
+                                            <div class="space-y-1">
+                                                <div class="flex items-center gap-2">
+                                                    <span class="px-2.5 py-0.5 rounded-full text-[11px] font-extrabold border ${st.badge.bg} ${st.badge.text} ${st.badge.border}">${st.badge.label}</span>
+                                                    <span class="text-[11px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md">${esc(st.category)}</span>
+                                                </div>
+                                                <h3 class="text-base font-bold text-slate-900 pt-1">${esc(st.name)}</h3>
+                                                <p class="text-xs text-slate-500 flex items-center gap-1">
+                                                    <i data-lucide="map-pin" class="w-3.5 h-3.5 text-emerald-600 shrink-0"></i> ${esc(st.address)}
+                                                </p>
+                                            </div>
+                                            <div class="bg-slate-900 text-white p-2.5 rounded-2xl text-center shrink-0 min-w-[64px]">
+                                                <div class="text-lg font-black text-amber-400 leading-none">${st.reviews.length > 0 ? st.score : '-'}</div>
+                                                <div class="text-[9px] font-bold text-slate-400 uppercase tracking-wider mt-1">Nota Geral</div>
+                                            </div>
+                                        </div>
+                                        <div class="p-5 bg-slate-50/50 space-y-3 flex-1">
+                                            <h4 class="text-[11px] font-extrabold uppercase tracking-wider text-slate-400">Resumo das Avaliações</h4>
+                                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
+                                                <div class="bg-white p-3 rounded-xl border border-slate-200 flex items-center justify-between">
+                                                    <span class="font-semibold text-slate-700 flex items-center gap-1.5"><i data-lucide="coffee" class="w-4 h-4 text-amber-600"></i> Café?</span>
+                                                    <span class="font-extrabold px-2.5 py-0.5 rounded border ${coffeeVal === 'SIM' ? 'text-emerald-700 bg-emerald-50 border-emerald-200' : 'text-rose-700 bg-rose-50 border-rose-200'}">${coffeeVal}</span>
+                                                </div>
+                                                <div class="bg-white p-3 rounded-xl border border-slate-200 flex items-center justify-between">
+                                                    <span class="font-semibold text-slate-700 flex items-center gap-1.5"><i data-lucide="utensils" class="w-4 h-4 text-orange-600"></i> Almoço?</span>
+                                                    <span class="font-extrabold px-2.5 py-0.5 rounded border ${lunchVal === 'SIM' ? 'text-emerald-700 bg-emerald-50 border-emerald-200' : 'text-rose-700 bg-rose-50 border-rose-200'}">${lunchVal}</span>
+                                                </div>
+                                                <div class="bg-white p-3 rounded-xl border border-slate-200 flex items-center justify-between">
+                                                    <span class="font-semibold text-slate-700 flex items-center gap-1.5"><i data-lucide="box" class="w-4 h-4 text-purple-600"></i> Micro-ondas?</span>
+                                                    <span class="font-extrabold px-2.5 py-0.5 rounded border ${micVal === 'SIM' ? 'text-emerald-700 bg-emerald-50 border-emerald-200' : 'text-rose-700 bg-rose-50 border-rose-200'}">${micVal}</span>
+                                                </div>
+                                                <div class="bg-white p-3 rounded-xl border border-slate-200 flex items-center justify-between">
+                                                    <span class="font-semibold text-slate-700 flex items-center gap-1.5"><i data-lucide="clock" class="w-4 h-4 text-indigo-600"></i> Pausa certa?</span>
+                                                    <span class="font-extrabold px-2.5 py-0.5 rounded border ${breakVal === 'SIM' ? 'text-emerald-700 bg-emerald-50 border-emerald-200' : 'text-rose-700 bg-rose-50 border-rose-200'}">${breakVal}</span>
+                                                </div>
+                                                <div class="bg-white p-3 rounded-xl border border-slate-200 flex items-center justify-between sm:col-span-2">
+                                                    <span class="font-semibold text-slate-700 flex items-center gap-1.5"><i data-lucide="users" class="w-4 h-4 text-blue-600"></i> Gestão Flexível</span>
+                                                    <span class="font-extrabold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200 text-xs">${stStats.flexibility || 5.0} / 5.0</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="p-4 bg-white border-t border-slate-100 flex items-center justify-between gap-2">
+                                            <span class="text-xs text-slate-500 font-medium">${st.reviews.length} avaliações</span>
+                                            <div class="flex items-center gap-2">
+                                                ${window.state.userRole === 'ADMIN' ? `
+                                                    <button onclick="window.openEditStore('${st.id}')" class="px-2.5 py-1.5 bg-purple-50 text-purple-700 border border-purple-200 text-xs font-bold rounded-xl flex items-center gap-1"><i data-lucide="pencil" class="w-3.5 h-3.5"></i> Editar</button>
+                                                    <button onclick="window.openDeleteStore('${st.id}')" class="px-2.5 py-1.5 bg-rose-50 text-rose-600 border border-rose-200 text-xs font-bold rounded-xl flex items-center gap-1"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Excluir</button>
+                                                ` : ''}
+                                                <button onclick="window.openReviewModalFor('${st.id}')" class="px-3 py-1.5 bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-bold rounded-xl flex items-center gap-1"><i data-lucide="plus-circle" class="w-3.5 h-3.5"></i> Avaliar</button>
+                                                <button onclick="window.openDetail('${st.id}')" class="px-3.5 py-1.5 bg-slate-900 text-white rounded-xl text-xs font-bold flex items-center gap-1">Ver Detalhes <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i></button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    `
+                    }
+                </main>
+
+                ${window.state.isAuthModalOpen ? `
+                    <div class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+                        <div class="bg-white w-full max-w-md rounded-2xl shadow-xl p-6 space-y-5 relative">
+                            <button onclick="window.closeModals()" class="absolute top-4 right-4 text-slate-400"><i data-lucide="x" class="w-5 h-5"></i></button>
+                            <div class="text-center space-y-2">
+                                <div class="w-12 h-12 bg-emerald-100 text-emerald-800 rounded-2xl flex items-center justify-center mx-auto"><i data-lucide="lock" class="w-6 h-6"></i></div>
+                                <h3 class="text-lg font-extrabold text-slate-900">Autenticação Necessária</h3>
+                                <p class="text-xs text-slate-600">Para manter a veracidade das avaliações, entre com a sua conta Google.</p>
+                            </div>
+                            <button onclick="window.handleGoogleLogin()" class="w-full py-3 bg-slate-900 text-white rounded-xl font-bold text-xs shadow-md flex items-center justify-center gap-3">Entrar com Conta Google</button>
+                        </div>
+                    </div>
+                ` : ''}
+
+                ${window.state.isAddStoreModalOpen && window.state.userRole === 'ADMIN' ? `
+                    <div class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+                        <div class="bg-white w-full max-w-lg rounded-2xl shadow-xl overflow-hidden relative">
+                            <div class="p-5 bg-purple-900 text-white flex items-center justify-between">
+                                <h3 class="text-base font-bold flex items-center gap-2"><i data-lucide="store" class="w-5 h-5 text-purple-300"></i> Cadastrar Novo Supermercado</h3>
+                                <button onclick="window.closeModals()"><i data-lucide="x" class="w-5 h-5"></i></button>
+                            </div>
+                            <form onsubmit="window.saveNewStore(event)" class="p-6 space-y-4">
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-700 mb-1">Nome do Supermercado *</label>
+                                    <input type="text" required value="${esc(window.state.newStoreForm.name)}" oninput="state.newStoreForm.name=this.value" placeholder="Ex: Supermercados BH" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs"/>
+                                </div>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-700 mb-1">Bairro *</label>
+                                        <input type="text" required value="${esc(window.state.newStoreForm.neighborhood)}" oninput="state.newStoreForm.neighborhood=this.value" placeholder="Ex: Savassi" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs"/>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-700 mb-1">Categoria</label>
+                                        <select onchange="state.newStoreForm.category=this.value" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs">
+                                            <option value="Supermercado">Supermercado</option>
+                                            <option value="Atacarejo">Atacarejo</option>
+                                            <option value="Hipermercado">Hipermercado</option>
+                                            <option value="Gourmet">Gourmet</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-700 mb-1">Endereço / Logradouro</label>
+                                    <input type="text" value="${esc(window.state.newStoreForm.address)}" oninput="state.newStoreForm.address=this.value" placeholder="Ex: Av. do Contorno, 6000" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs"/>
+                                </div>
+                                <div class="pt-3 border-t flex justify-end gap-2">
+                                    <button type="button" onclick="window.closeModals()" class="px-4 py-2 text-slate-600 text-xs font-bold">Cancelar</button>
+                                    <button type="submit" class="px-5 py-2 bg-purple-700 text-white rounded-xl text-xs font-bold shadow-md">Salvar Loja</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                ` : ''}
+
+                ${window.state.isEditStoreModalOpen && window.state.editingStore && window.state.userRole === 'ADMIN' ? `
+                    <div class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+                        <div class="bg-white w-full max-w-lg rounded-2xl shadow-xl overflow-hidden relative">
+                            <div class="p-5 bg-purple-900 text-white flex items-center justify-between">
+                                <h3 class="text-base font-bold flex items-center gap-2"><i data-lucide="pencil" class="w-5 h-5 text-purple-300"></i> Editar Loja</h3>
+                                <button onclick="window.closeModals()"><i data-lucide="x" class="w-5 h-5"></i></button>
+                            </div>
+                            <form onsubmit="window.saveEditedStore(event)" class="p-6 space-y-4">
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-700 mb-1">Nome *</label>
+                                    <input type="text" required value="${esc(window.state.editingStore.name)}" oninput="state.editingStore.name=this.value" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs"/>
+                                </div>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-700 mb-1">Bairro</label>
+                                        <input type="text" value="${esc(window.state.editingStore.neighborhood)}" oninput="state.editingStore.neighborhood=this.value" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs"/>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-700 mb-1">Categoria</label>
+                                        <select onchange="state.editingStore.category=this.value" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs">
+                                            <option value="Supermercado" ${window.state.editingStore.category === 'Supermercado' ? 'selected' : ''}>Supermercado</option>
+                                            <option value="Atacarejo" ${window.state.editingStore.category === 'Atacarejo' ? 'selected' : ''}>Atacarejo</option>
+                                            <option value="Hipermercado" ${window.state.editingStore.category === 'Hipermercado' ? 'selected' : ''}>Hipermercado</option>
+                                            <option value="Gourmet" ${window.state.editingStore.category === 'Gourmet' ? 'selected' : ''}>Gourmet</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-700 mb-1">Endereço Completo</label>
+                                    <input type="text" value="${esc(window.state.editingStore.address)}" oninput="state.editingStore.address=this.value" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs"/>
+                                </div>
+                                <div class="pt-3 border-t flex justify-end gap-2">
+                                    <button type="button" onclick="window.closeModals()" class="px-4 py-2 text-slate-600 text-xs font-bold">Cancelar</button>
+                                    <button type="submit" class="px-5 py-2 bg-purple-700 text-white rounded-xl text-xs font-bold">Salvar Alterações</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                ` : ''}
+
+                ${window.state.storeToDelete && window.state.userRole === 'ADMIN' ? `
+                    <div class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+                        <div class="bg-white w-full max-w-md rounded-2xl shadow-xl p-6 space-y-4 text-center">
+                            <div class="w-12 h-12 bg-rose-100 text-rose-600 rounded-2xl flex items-center justify-center mx-auto"><i data-lucide="trash-2" class="w-6 h-6"></i></div>
+                            <h3 class="text-lg font-bold text-slate-900">Excluir Supermercado?</h3>
+                            <p class="text-xs text-slate-600">Remover "${esc(window.state.storeToDelete.name)}" do catálogo?</p>
+                            <div class="flex items-center gap-2 pt-2">
+                                <button onclick="window.closeModals()" class="flex-1 py-2.5 bg-slate-100 rounded-xl text-xs font-bold">Cancelar</button>
+                                <button onclick="window.confirmDeleteStore()" class="flex-1 py-2.5 bg-rose-600 text-white rounded-xl text-xs font-bold">Sim, Excluir</button>
+                            </div>
+                        </div>
+                    </div>
+                ` : ''}
+
+                ${window.state.isReviewModalOpen ? `
+                    <div class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+                        <div class="bg-white w-full max-w-2xl rounded-2xl shadow-xl overflow-hidden my-8 max-h-[90vh] flex flex-col">
+                            <div class="p-5 bg-emerald-800 text-white flex items-center justify-between">
+                                <h3 class="text-lg font-bold flex items-center gap-2"><i data-lucide="plus-circle" class="w-5 h-5 text-emerald-300"></i> Avaliar Loja</h3>
+                                <button onclick="window.closeModals()"><i data-lucide="x" class="w-5 h-5"></i></button>
+                            </div>
+                            <form onsubmit="window.submitReview(event); return false;" class="p-6 space-y-5 overflow-y-auto flex-1">
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-800 mb-1">Selecione a Loja *</label>
+                                    <select required onchange="state.reviewForm.storeId=this.value" class="w-full px-3 py-2.5 bg-white border border-slate-300 rounded-xl text-xs font-medium">
+                                        <option value="">-- Selecione --</option>
+                                        ${window.state.stores.map(s => `<option value="${s.id}" ${window.state.reviewForm.storeId === s.id ? 'selected' : ''}>${esc(s.name)} (${esc(s.address)})</option>`).join('')}
+                                    </select>
+                                </div>
+                                <div class="grid grid-cols-3 gap-3">
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-700 mb-1">Função</label>
+                                        <select onchange="state.reviewForm.role=this.value" class="w-full px-3 py-2 bg-slate-50 border rounded-xl text-xs">
+                                            <option value="Promotor de Vendas" ${window.state.reviewForm.role === 'Promotor de Vendas' ? 'selected' : ''}>Promotor de Vendas</option>
+                                            <option value="Repositor Extra" ${window.state.reviewForm.role === 'Repositor Extra' ? 'selected' : ''}>Repositor Extra</option>
+                                            <option value="Operador de Caixa" ${window.state.reviewForm.role === 'Operador de Caixa' ? 'selected' : ''}>Operador de Caixa</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-700 mb-1">Vínculo</label>
+                                        <select onchange="state.reviewForm.status=this.value" class="w-full px-3 py-2 bg-slate-50 border rounded-xl text-xs">
+                                            <option value="Atual" ${window.state.reviewForm.status === 'Atual' ? 'selected' : ''}>Atua Atualmente</option>
+                                            <option value="Ex-freelancer" ${window.state.reviewForm.status === 'Ex-freelancer' ? 'selected' : ''}>Já atuou</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-700 mb-1">Tempo</label>
+                                        <select onchange="state.reviewForm.period=this.value" class="w-full px-3 py-2 bg-slate-50 border rounded-xl text-xs">
+                                            <option value="1 a 6 meses" ${window.state.reviewForm.period === '1 a 6 meses' ? 'selected' : ''}>1 a 6 meses</option>
+                                            <option value="Mais de 6 meses" ${window.state.reviewForm.period === 'Mais de 6 meses' ? 'selected' : ''}>Mais de 6 meses</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="space-y-3 pt-2">
+                                    <div class="bg-amber-50 p-3 rounded-xl border border-amber-200">
+                                        <label class="text-xs font-bold block mb-1">Oferece café?</label>
+                                        <div class="grid grid-cols-2 gap-2">
+                                            <button type="button" onclick="state.reviewForm.coffee='SIM';render()" class="py-2 rounded-xl text-xs font-bold border ${window.state.reviewForm.coffee === 'SIM' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-700'}">SIM</button>
+                                            <button type="button" onclick="state.reviewForm.coffee='NÃO';render()" class="py-2 rounded-xl text-xs font-bold border ${window.state.reviewForm.coffee === 'NÃO' ? 'bg-rose-600 text-white border-rose-600' : 'bg-white text-slate-700'}">NÃO</button>
+                                        </div>
+                                    </div>
+                                    <div class="bg-orange-50 p-3 rounded-xl border border-orange-200">
+                                        <label class="text-xs font-bold block mb-1">Oferece almoço?</label>
+                                        <div class="grid grid-cols-2 gap-2">
+                                            <button type="button" onclick="state.reviewForm.lunch='SIM';render()" class="py-2 rounded-xl text-xs font-bold border ${window.state.reviewForm.lunch === 'SIM' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-700'}">SIM</button>
+                                            <button type="button" onclick="state.reviewForm.lunch='NÃO';render()" class="py-2 rounded-xl text-xs font-bold border ${window.state.reviewForm.lunch === 'NÃO' ? 'bg-rose-600 text-white border-rose-600' : 'bg-white text-slate-700'}">NÃO</button>
+                                        </div>
+                                    </div>
+                                    <div class="bg-purple-50 p-3 rounded-xl border border-purple-200">
+                                        <label class="text-xs font-bold block mb-1">Tem micro-ondas?</label>
+                                        <div class="grid grid-cols-2 gap-2">
+                                            <button type="button" onclick="state.reviewForm.microwave='SIM';render()" class="py-2 rounded-xl text-xs font-bold border ${window.state.reviewForm.microwave === 'SIM' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-700'}">SIM</button>
+                                            <button type="button" onclick="state.reviewForm.microwave='NÃO';render()" class="py-2 rounded-xl text-xs font-bold border ${window.state.reviewForm.microwave === 'NÃO' ? 'bg-rose-600 text-white border-rose-600' : 'bg-white text-slate-700'}">NÃO</button>
+                                        </div>
+                                    </div>
+                                    <div class="bg-indigo-50 p-3 rounded-xl border border-indigo-200">
+                                        <label class="text-xs font-bold block mb-1">Respeita pausa no tempo certo?</label>
+                                        <div class="grid grid-cols-2 gap-2">
+                                            <button type="button" onclick="state.reviewForm.breakTime='SIM';render()" class="py-2 rounded-xl text-xs font-bold border ${window.state.reviewForm.breakTime === 'SIM' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-700'}">SIM</button>
+                                            <button type="button" onclick="state.reviewForm.breakTime='NÃO';render()" class="py-2 rounded-xl text-xs font-bold border ${window.state.reviewForm.breakTime === 'NÃO' ? 'bg-rose-600 text-white border-rose-600' : 'bg-white text-slate-700'}">NÃO</button>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="text-xs font-bold block mb-1">Gestão flexível (1 a 5): <span id="flexLabel" class="text-blue-600">${window.state.reviewForm.flexibility}</span></label>
+                                        <input type="range" min="1" max="5" value="${window.state.reviewForm.flexibility}" oninput="state.reviewForm.flexibility=this.value;document.getElementById('flexLabel').textContent=this.value" class="w-full accent-blue-600"/>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-700 mb-1">Depoimento *</label>
+                                        <textarea required rows="3" oninput="state.reviewForm.comment=this.value" placeholder="Descreva a rotina..." class="w-full px-3 py-2 bg-slate-50 border rounded-xl text-xs">${esc(window.state.reviewForm.comment)}</textarea>
+                                    </div>
+                                    <div class="flex items-center justify-between bg-slate-100 p-3 rounded-xl">
+                                        <span class="text-xs font-bold">Publicar de forma Anônima?</span>
+                                        <input type="checkbox" ${window.state.reviewForm.isAnonymous ? 'checked' : ''} onchange="state.reviewForm.isAnonymous=this.checked" class="w-4 h-4 accent-emerald-600"/>
+                                    </div>
+                                </div>
+                                <div class="pt-3 border-t flex justify-end gap-3">
+                                    <button type="button" onclick="window.closeModals()" class="px-4 py-2 text-slate-600 text-xs font-bold">Cancelar</button>
+                                    <button type="submit" class="px-5 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold">Publicar Avaliação</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                ` : ''}
+
+                ${window.state.selectedStoreDetail ? `
+                    <div class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+                        <div class="bg-white w-full max-w-3xl rounded-2xl shadow-xl overflow-hidden my-8 max-h-[90vh] flex flex-col">
+                            <div class="p-5 bg-slate-900 text-white flex items-center justify-between">
+                                <div>
+                                    <span class="text-[10px] font-extrabold uppercase text-emerald-400 bg-emerald-950 px-2 py-0.5 rounded border border-emerald-800">${esc(window.state.selectedStoreDetail.category)}</span>
+                                    <h3 class="text-lg font-bold pt-1">${esc(window.state.selectedStoreDetail.name)}</h3>
+                                    <p class="text-xs text-slate-400"><i data-lucide="map-pin" class="w-3.5 h-3.5 inline text-emerald-400"></i> ${esc(window.state.selectedStoreDetail.address)}</p>
+                                </div>
+                                <button onclick="window.closeModals()"><i data-lucide="x" class="w-5 h-5"></i></button>
+                            </div>
+                            <div class="p-6 space-y-6 overflow-y-auto flex-1">
+                                <div class="space-y-3">
+                                    <h4 class="text-xs font-extrabold uppercase text-slate-500">Depoimentos (${window.state.selectedStoreDetail.reviews.length})</h4>
+                                    ${window.state.selectedStoreDetail.reviews.length === 0 ? '<p class="text-xs text-slate-400 italic">Nenhum depoimento ainda.</p>' : window.state.selectedStoreDetail.reviews.map(r => `
+                                        <div class="bg-slate-50 p-4 rounded-xl border space-y-2 text-xs">
+                                            <div class="flex items-center justify-between border-b pb-2">
+                                                <span class="font-bold text-slate-800">${esc(r.userName)} <span class="text-[10px] bg-slate-200 px-2 py-0.5 rounded">${esc(r.role)} • ${esc(r.status)}</span></span>
+                                                <span class="text-[10px] text-slate-400">${esc(r.date)}</span>
+                                            </div>
+                                            <div class="flex gap-2 text-[11px] flex-wrap">
+                                                <span class="px-2 py-0.5 rounded font-bold ${r.coffee === 'SIM' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}">Café: ${r.coffee}</span>
+                                                <span class="px-2 py-0.5 rounded font-bold ${r.lunch === 'SIM' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}">Almoço: ${r.lunch}</span>
+                                                <span class="px-2 py-0.5 rounded font-bold ${r.microwave === 'SIM' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}">Micro-ondas: ${r.microwave}</span>
+                                                <span class="px-2 py-0.5 rounded font-bold ${r.breakTime === 'SIM' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}">Pausa: ${r.breakTime}</span>
+                                            </div>
+                                            <p class="text-slate-700">${esc(r.comment)}</p>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                            <div class="p-4 bg-slate-50 border-t flex justify-end">
+                                <button onclick="window.closeModals()" class="px-5 py-2 bg-slate-200 text-slate-800 rounded-xl text-xs font-bold">Fechar</button>
+                            </div>
+                        </div>
+                    </div>
+                ` : ''}
+
+                <footer class="bg-slate-900 text-slate-400 text-xs py-6 border-t border-slate-800">
+                    <div class="max-w-7xl mx-auto px-4 text-center space-y-2">
+                        <p class="font-semibold text-slate-300">FreeEval Supermercados © 2026 — Plataforma Colaborativa</p>
+                    </div>
+                </footer>
+            `;
+
+            lucide.createIcons();
+        }
+        window.render = render;
+
+        window.setCategory = (cat) => { window.state.selectedCategory = cat; render(); };
+        window.setSearch = (val) => { window.state.searchTerm = val; render(); const el = document.getElementById('searchInput'); if (el) { el.focus(); el.setSelectionRange(val.length, val.length); } };
+        window.setSort = (val) => { window.state.sortBy = val; render(); };
+        window.openAuthModal = () => { window.state.isAuthModalOpen = true; render(); };
+        window.openAddStore = () => { if(window.state.userRole !== 'ADMIN') { showToast('Apenas o administrador pode cadastrar lojas.'); return; } window.state.isAddStoreModalOpen = true; render(); };
+        window.openReviewModal = () => { window.state.isReviewModalOpen = true; render(); };
+        window.openReviewModalFor = (id) => { window.state.reviewForm.storeId = id; window.state.isReviewModalOpen = true; render(); };
+        window.openDetail = (id) => { window.state.selectedStoreDetail = window.state.stores.find(s => s.id === id); render(); };
+        window.openEditStore = (id) => { window.state.editingStore = JSON.parse(JSON.stringify(window.state.stores.find(s => s.id === id))); window.state.isEditStoreModalOpen = true; render(); };
+        window.openDeleteStore = (id) => { window.state.storeToDelete = window.state.stores.find(s => s.id === id); render(); };
+        window.closeModals = () => {
+            window.state.isAuthModalOpen = false;
+            window.state.isAddStoreModalOpen = false;
+            window.state.isEditStoreModalOpen = false;
+            window.state.isReviewModalOpen = false;
+            window.state.selectedStoreDetail = null;
+            window.state.storeToDelete = null;
+            render();
+        };
+
+        render();
+    </script>
 </body>
 </html>
