@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Freelancer Seguro</title>
+    <title>FreeEval Supermercados</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Lucide Icons -->
@@ -21,27 +21,31 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, onSnapshot, doc, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, onSnapshot, doc, setDoc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Cole aqui a configuração do SEU projeto Firebase para ter login Google e dados compartilhados.
-        // Com tudo vazio, o site funciona em modo local (dados salvos só neste navegador).
+        // =========================================================================
+        // 1. COLE AQUI AS CHAVES COPIADAS DO SEU FIREBASE CONSOLE:
+        // =========================================================================
         const firebaseConfig = {
-            apiKey: "",
-            authDomain: "",
-            projectId: "",
-            storageBucket: "",
-            messagingSenderId: "",
-            appId: ""
+            apiKey: "SUA_API_KEY_AQUI",
+            authDomain: "SEU_PROJETO.firebaseapp.com",
+            projectId: "SEU_PROJETO_ID",
+            storageBucket: "SEU_PROJETO.firebasestorage.app",
+            messagingSenderId: "12345678900",
+            appId: "1:12345678900:web:abcdef123456"
         };
 
-        const firebaseReady = Boolean(firebaseConfig.apiKey);
+        // =========================================================================
+        // 2. SEU E-MAIL GOOGLE PARA TER PERMISSÃO DE ADMINISTRADOR (CADASTRAR LOJAS)
+        // =========================================================================
+        const AUTHORIZED_ADMIN_EMAIL = 'seu-email@gmail.com';
+
+        const firebaseReady = Boolean(firebaseConfig.apiKey && firebaseConfig.apiKey !== "SUA_API_KEY_AQUI");
         const app = firebaseReady ? initializeApp(firebaseConfig) : null;
         const auth = firebaseReady ? getAuth(app) : null;
         const db = firebaseReady ? getFirestore(app) : null;
-        const appId = 'freeeval-supermercados';
 
-        const LOCAL_STORAGE_KEY = 'freeeval_stores_v9';
-        const AUTHORIZED_ADMIN_EMAIL = 'admin@freeeval.com';
+        const LOCAL_STORAGE_KEY = 'freeeval_stores_v10';
 
         const DEFAULT_INITIAL_STORES = [
             {
@@ -76,39 +80,6 @@
                         comment: 'Excelente loja para trabalhar! O refeitório conta com micro-ondas em bom estado e café nos dois turnos.'
                     }
                 ]
-            },
-            {
-                id: 'store_2',
-                name: 'Supernosso - Belvedere',
-                neighborhood: 'Belvedere',
-                address: 'Av. Luiz Paulo Franco, 400 - Bairro Belvedere - Belo Horizonte, MG',
-                category: 'Gourmet',
-                registeredBy: 'Administrador',
-                stats: {
-                    coffee: { yes: 19, no: 1 },
-                    lunch: { yes: 18, no: 2 },
-                    microwave: { yes: 19, no: 1 },
-                    breakTime: { yes: 19, no: 1 },
-                    flexibility: 4.9
-                },
-                reviews: [
-                    {
-                        id: 'r2',
-                        role: 'Promotor de Bebidas',
-                        status: 'Atual',
-                        period: '1 ano',
-                        isAnonymous: false,
-                        userName: 'Aline Souza',
-                        date: 'Ontem',
-                        rating: 5,
-                        coffee: 'SIM',
-                        lunch: 'SIM',
-                        microwave: 'SIM',
-                        breakTime: 'SIM',
-                        flexibility: 5,
-                        comment: 'A melhor loja da região! Tratam o pessoal terceirizado com respeito e o espaço de descanso é ótimo.'
-                    }
-                ]
             }
         ];
 
@@ -121,7 +92,7 @@
             stores: (() => {
                 try {
                     const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
-                    if (saved) return JSON.parse(saved).filter(s => /^[\w-]+$/.test(s.id));
+                    if (saved) return JSON.parse(saved);
                 } catch(e) {}
                 return DEFAULT_INITIAL_STORES;
             })(),
@@ -167,32 +138,33 @@
         window.showToast = showToast;
 
         if (firebaseReady) {
-        signInAnonymously(auth).catch(() => {});
-        onAuthStateChanged(auth, (u) => {
-            if (u && !u.isAnonymous) {
-                window.state.user = u;
-                if (u.email === AUTHORIZED_ADMIN_EMAIL) {
-                    window.state.userRole = 'ADMIN';
+            signInAnonymously(auth).catch(() => {});
+            onAuthStateChanged(auth, (u) => {
+                if (u && !u.isAnonymous) {
+                    window.state.user = u;
+                    if (u.email === AUTHORIZED_ADMIN_EMAIL) {
+                        window.state.userRole = 'ADMIN';
+                    } else {
+                        window.state.userRole = 'FREELANCER';
+                    }
                 } else {
                     window.state.userRole = 'FREELANCER';
                 }
-            } else {
-                window.state.userRole = 'FREELANCER';
-            }
-            render();
-        });
-        }
+                render();
+            });
 
-        try {
-            if (firebaseReady) onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'stores'), (snapshot) => {
-                if (snapshot && !snapshot.empty) {
-                    const loaded = snapshot.docs.map(d => ({ id: d.id, ...d.data() })).filter(s => !s._deleted && /^[\w-]+$/.test(s.id));
-                    window.state.stores = loaded;
-                    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(loaded));
-                    render();
-                }
-            }, () => {});
-        } catch(e) {}
+            // Sincronização em Tempo Real do Firestore
+            try {
+                onSnapshot(collection(db, 'stores'), (snapshot) => {
+                    if (snapshot && !snapshot.empty) {
+                        const loaded = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+                        window.state.stores = loaded;
+                        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(loaded));
+                        render();
+                    }
+                }, (err) => console.error(err));
+            } catch(e) {}
+        }
 
         const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
@@ -229,11 +201,7 @@
 
         window.handleGoogleLogin = async () => {
             if (!firebaseReady) {
-                window.state.user = { uid: 'demo_user', displayName: 'Modo demonstração', email: AUTHORIZED_ADMIN_EMAIL };
-                window.state.userRole = 'ADMIN';
-                window.state.isAuthModalOpen = false;
-                showToast('Modo demonstração: administrador local ativado.');
-                render();
+                showToast('Chaves do Firebase não configuradas no index.html');
                 return;
             }
             try {
@@ -264,7 +232,7 @@
             render();
         };
 
-        window.saveNewStore = (e) => {
+        window.saveNewStore = async (e) => {
             e.preventDefault();
             if (window.state.userRole !== 'ADMIN') {
                 showToast('Apenas o administrador principal pode cadastrar lojas.');
@@ -272,7 +240,7 @@
             }
             const f = window.state.newStoreForm;
             if (!f.name || !f.name.trim()) {
-                showToast('Por favor, informe o nome do supermercado.');
+                showToast('Informe o nome do supermercado.');
                 return;
             }
 
@@ -286,24 +254,16 @@
                 address: fullAddress,
                 category: f.category || 'Supermercado',
                 registeredBy: 'Administrador',
-                stats: { 
-                    coffee: {yes:0, no:0}, 
-                    lunch: {yes:0, no:0}, 
-                    microwave: {yes:0, no:0},
-                    breakTime: {yes:0, no:0}, 
-                    flexibility: 5 
-                },
+                stats: { coffee: {yes:0, no:0}, lunch: {yes:0, no:0}, microwave: {yes:0, no:0}, breakTime: {yes:0, no:0}, flexibility: 5 },
                 reviews: []
             };
 
-            window.state.stores = [newObj, ...window.state.stores];
-            try {
+            if (firebaseReady) {
+                await setDoc(doc(db, 'stores', id), newObj);
+            } else {
+                window.state.stores = [newObj, ...window.state.stores];
                 localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(window.state.stores));
-            } catch(err) {}
-
-            try {
-                setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'stores', id), newObj);
-            } catch(err) {}
+            }
 
             window.state.isAddStoreModalOpen = false;
             window.state.newStoreForm = { name: '', neighborhood: '', address: '', category: 'Supermercado', cityState: 'Belo Horizonte, MG' };
@@ -311,37 +271,39 @@
             render();
         };
 
-        window.saveEditedStore = (e) => {
+        window.saveEditedStore = async (e) => {
             e.preventDefault();
             if (window.state.userRole !== 'ADMIN' || !window.state.editingStore) return;
             const ed = window.state.editingStore;
             
-            window.state.stores = window.state.stores.map(st => st.id === ed.id ? ed : st);
-            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(window.state.stores));
-            try {
-                updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'stores', ed.id), {
+            if (firebaseReady) {
+                await updateDoc(doc(db, 'stores', ed.id), {
                     name: ed.name,
                     neighborhood: ed.neighborhood,
                     address: ed.address,
                     category: ed.category
                 });
-            } catch(err) {}
+            } else {
+                window.state.stores = window.state.stores.map(st => st.id === ed.id ? ed : st);
+                localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(window.state.stores));
+            }
 
             window.state.isEditStoreModalOpen = false;
             window.state.editingStore = null;
-            showToast('Loja atualizada com sucesso!');
+            showToast('Loja atualizada!');
             render();
         };
 
-        window.confirmDeleteStore = () => {
+        window.confirmDeleteStore = async () => {
             const st = window.state.storeToDelete;
             if (!st || window.state.userRole !== 'ADMIN') return;
 
-            window.state.stores = window.state.stores.filter(s => s.id !== st.id);
-            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(window.state.stores));
-            try {
-                setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'stores', st.id), { _deleted: true }, { merge: true });
-            } catch(err) {}
+            if (firebaseReady) {
+                await deleteDoc(doc(db, 'stores', st.id));
+            } else {
+                window.state.stores = window.state.stores.filter(s => s.id !== st.id);
+                localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(window.state.stores));
+            }
 
             window.state.storeToDelete = null;
             window.state.selectedStoreDetail = null;
@@ -349,18 +311,15 @@
             render();
         };
 
-        window.submitReview = (e) => {
+        window.submitReview = async (e) => {
             if (e) e.preventDefault();
             const rf = window.state.reviewForm;
             if (!rf.storeId) {
-                showToast('Por favor, selecione uma loja para avaliar.');
+                showToast('Selecione uma loja para avaliar.');
                 return;
             }
             const target = window.state.stores.find(s => s.id === rf.storeId);
-            if (!target) {
-                showToast('Loja selecionada não encontrada.');
-                return;
-            }
+            if (!target) return;
 
             const newRev = {
                 id: 'rev_' + Date.now(),
@@ -369,7 +328,7 @@
                 period: rf.period,
                 isAnonymous: rf.isAnonymous,
                 userName: rf.isAnonymous ? 'Anônimo' : (window.state.user?.displayName || 'Freelancer'),
-                date: 'Agora mesmo',
+                date: 'Hoje',
                 rating: Number(rf.rating),
                 coffee: rf.coffee,
                 lunch: rf.lunch,
@@ -379,13 +338,7 @@
                 comment: rf.comment
             };
 
-            const tStats = target.stats || { 
-                coffee: {yes:0, no:0}, 
-                lunch: {yes:0, no:0}, 
-                microwave: {yes:0, no:0}, 
-                breakTime: {yes:0, no:0}, 
-                flexibility: 5 
-            };
+            const tStats = target.stats || { coffee: {yes:0, no:0}, lunch: {yes:0, no:0}, microwave: {yes:0, no:0}, breakTime: {yes:0, no:0}, flexibility: 5 };
 
             const updatedStats = {
                 coffee: { yes: (tStats.coffee?.yes || 0) + (rf.coffee === 'SIM' ? 1 : 0), no: (tStats.coffee?.no || 0) + (rf.coffee === 'NÃO' ? 1 : 0) },
@@ -401,14 +354,12 @@
                 reviews: [newRev, ...(target.reviews || [])]
             };
 
-            window.state.stores = window.state.stores.map(s => s.id === target.id ? updatedStore : s);
-            try {
+            if (firebaseReady) {
+                await setDoc(doc(db, 'stores', target.id), updatedStore, { merge: true });
+            } else {
+                window.state.stores = window.state.stores.map(s => s.id === target.id ? updatedStore : s);
                 localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(window.state.stores));
-            } catch(err) {}
-
-            try {
-                setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'stores', target.id), updatedStore, { merge: true });
-            } catch(err) {}
+            }
 
             window.state.isReviewModalOpen = false;
             window.state.reviewForm.comment = '';
@@ -422,7 +373,7 @@
             
             const filtered = window.state.stores.map(st => {
                 const score = calculateScore(st.stats);
-                const badge = getBadge(score, st.reviews.length);
+                const badge = getBadge(score, st.reviews ? st.reviews.length : 0);
                 return { ...st, score, badge };
             }).filter(st => {
                 const matchSearch = st.name.toLowerCase().includes(window.state.searchTerm.toLowerCase()) || st.address.toLowerCase().includes(window.state.searchTerm.toLowerCase());
@@ -433,7 +384,7 @@
                 return matchSearch && matchCat;
             }).sort((a,b) => {
                 if (window.state.sortBy === 'RATING') return b.score - a.score;
-                if (window.state.sortBy === 'REVIEWS') return b.reviews.length - a.reviews.length;
+                if (window.state.sortBy === 'REVIEWS') return (b.reviews?.length || 0) - (a.reviews?.length || 0);
                 return a.name.localeCompare(b.name);
             });
 
@@ -441,7 +392,7 @@
                 ${window.state.toastMsg ? `
                     <div class="fixed top-4 right-4 z-50 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2 border border-slate-700">
                         <i data-lucide="sparkles" class="w-4 h-4 text-emerald-400"></i>
-                        <span class="text-xs font-semibold">${window.state.toastMsg}</span>
+                        <span class="text-xs font-semibold">\${window.state.toastMsg}</span>
                     </div>
                 ` : ''}
 
@@ -449,7 +400,7 @@
                     <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col items-center justify-center text-center gap-3">
                         <div>
                             <h1 class="text-xl font-black tracking-tight text-white">FreeEval Supermercados</h1>
-                            <p class="text-xs text-emerald-200">A comunidade colaborativa de freelancers para avaliar as condições das lojas</p>
+                            <p class="text-xs text-emerald-200">A comunidade colaborativa de freelancers</p>
                         </div>
                         <div class="flex items-center gap-2.5 flex-wrap justify-center">
                             ${window.state.userRole === 'ADMIN' ? `
@@ -463,8 +414,8 @@
                             ${window.state.user ? `
                                 <div class="flex items-center gap-3 bg-emerald-950/60 pl-3 pr-2 py-1.5 rounded-2xl border border-emerald-700/60 whitespace-nowrap">
                                     <div class="text-right">
-                                        <div class="text-xs font-bold text-emerald-100">${esc(window.state.user.displayName || window.state.user.email)}</div>
-                                        <div class="text-[10px] text-emerald-300">${window.state.userRole === 'ADMIN' ? 'Administrador' : 'Freelancer'}</div>
+                                        <div class="text-xs font-bold text-emerald-100">\${esc(window.state.user.displayName || window.state.user.email)}</div>
+                                        <div class="text-[10px] text-emerald-300">\${window.state.userRole === 'ADMIN' ? 'Administrador' : 'Freelancer'}</div>
                                     </div>
                                     <button onclick="window.handleSignOut()" class="p-1.5 bg-emerald-800 hover:bg-rose-700 text-white rounded-xl transition">
                                         <i data-lucide="log-out" class="w-4 h-4"></i>
@@ -515,12 +466,13 @@
                         </div>
                     ` : `
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            ${filtered.map(st => {
+                            \${filtered.map(st => {
                                 const stStats = st.stats || {};
                                 const coffeeVal = getMajority(stStats.coffee);
                                 const lunchVal = getMajority(stStats.lunch);
                                 const micVal = getMajority(stStats.microwave);
                                 const breakVal = getMajority(stStats.breakTime);
+                                const revCount = st.reviews ? st.reviews.length : 0;
                                 return `
                                     <div class="bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition overflow-hidden flex flex-col">
                                         <div class="p-5 border-b border-slate-100 flex items-start justify-between gap-3">
@@ -535,7 +487,7 @@
                                                 </p>
                                             </div>
                                             <div class="bg-slate-900 text-white p-2.5 rounded-2xl text-center shrink-0 min-w-[64px]">
-                                                <div class="text-lg font-black text-amber-400 leading-none">${st.reviews.length > 0 ? st.score : '-'}</div>
+                                                <div class="text-lg font-black text-amber-400 leading-none">${revCount > 0 ? st.score : '-'}</div>
                                                 <div class="text-[9px] font-bold text-slate-400 uppercase tracking-wider mt-1">Nota Geral</div>
                                             </div>
                                         </div>
@@ -565,11 +517,11 @@
                                             </div>
                                         </div>
                                         <div class="p-4 bg-white border-t border-slate-100 flex items-center justify-between gap-2">
-                                            <span class="text-xs text-slate-500 font-medium">${st.reviews.length} avaliações</span>
+                                            <span class="text-xs text-slate-500 font-medium">${revCount} avaliações</span>
                                             <div class="flex items-center gap-2">
                                                 ${window.state.userRole === 'ADMIN' ? `
-                                                    <button onclick="window.openEditStore('${st.id}')" class="px-2.5 py-1.5 bg-purple-50 text-purple-700 border border-purple-200 text-xs font-bold rounded-xl flex items-center gap-1"><i data-lucide="pencil" class="w-3.5 h-3.5"></i> Editar</button>
-                                                    <button onclick="window.openDeleteStore('${st.id}')" class="px-2.5 py-1.5 bg-rose-50 text-rose-600 border border-rose-200 text-xs font-bold rounded-xl flex items-center gap-1"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Excluir</button>
+                                                    <button onclick="window.openEditStore('\${st.id}')" class="px-2.5 py-1.5 bg-purple-50 text-purple-700 border border-purple-200 text-xs font-bold rounded-xl flex items-center gap-1"><i data-lucide="pencil" class="w-3.5 h-3.5"></i> Editar</button>
+                                                    <button onclick="window.openDeleteStore('\${st.id}')" class="px-2.5 py-1.5 bg-rose-50 text-rose-600 border border-rose-200 text-xs font-bold rounded-xl flex items-center gap-1"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Excluir</button>
                                                 ` : ''}
                                                 <button onclick="window.openReviewModalFor('${st.id}')" class="px-3 py-1.5 bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-bold rounded-xl flex items-center gap-1"><i data-lucide="plus-circle" class="w-3.5 h-3.5"></i> Avaliar</button>
                                                 <button onclick="window.openDetail('${st.id}')" class="px-3.5 py-1.5 bg-slate-900 text-white rounded-xl text-xs font-bold flex items-center gap-1">Ver Detalhes <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i></button>
@@ -579,8 +531,7 @@
                                 `;
                             }).join('')}
                         </div>
-                    `
-                    }
+                    `}
                 </main>
 
                 ${window.state.isAuthModalOpen ? `
@@ -607,12 +558,12 @@
                             <form onsubmit="window.saveNewStore(event)" class="p-6 space-y-4">
                                 <div>
                                     <label class="block text-xs font-bold text-slate-700 mb-1">Nome do Supermercado *</label>
-                                    <input type="text" required value="${esc(window.state.newStoreForm.name)}" oninput="state.newStoreForm.name=this.value" placeholder="Ex: Supermercados BH" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs"/>
+                                    <input type="text" required value="\${esc(window.state.newStoreForm.name)}" oninput="state.newStoreForm.name=this.value" placeholder="Ex: Supermercados BH" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs"/>
                                 </div>
                                 <div class="grid grid-cols-2 gap-3">
                                     <div>
                                         <label class="block text-xs font-bold text-slate-700 mb-1">Bairro *</label>
-                                        <input type="text" required value="${esc(window.state.newStoreForm.neighborhood)}" oninput="state.newStoreForm.neighborhood=this.value" placeholder="Ex: Savassi" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs"/>
+                                        <input type="text" required value="\${esc(window.state.newStoreForm.neighborhood)}" oninput="state.newStoreForm.neighborhood=this.value" placeholder="Ex: Savassi" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs"/>
                                     </div>
                                     <div>
                                         <label class="block text-xs font-bold text-slate-700 mb-1">Categoria</label>
@@ -626,7 +577,7 @@
                                 </div>
                                 <div>
                                     <label class="block text-xs font-bold text-slate-700 mb-1">Endereço / Logradouro</label>
-                                    <input type="text" value="${esc(window.state.newStoreForm.address)}" oninput="state.newStoreForm.address=this.value" placeholder="Ex: Av. do Contorno, 6000" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs"/>
+                                    <input type="text" value="\${esc(window.state.newStoreForm.address)}" oninput="state.newStoreForm.address=this.value" placeholder="Ex: Av. do Contorno, 6000" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs"/>
                                 </div>
                                 <div class="pt-3 border-t flex justify-end gap-2">
                                     <button type="button" onclick="window.closeModals()" class="px-4 py-2 text-slate-600 text-xs font-bold">Cancelar</button>
@@ -647,26 +598,26 @@
                             <form onsubmit="window.saveEditedStore(event)" class="p-6 space-y-4">
                                 <div>
                                     <label class="block text-xs font-bold text-slate-700 mb-1">Nome *</label>
-                                    <input type="text" required value="${esc(window.state.editingStore.name)}" oninput="state.editingStore.name=this.value" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs"/>
+                                    <input type="text" required value="\${esc(window.state.editingStore.name)}" oninput="state.editingStore.name=this.value" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs"/>
                                 </div>
                                 <div class="grid grid-cols-2 gap-3">
                                     <div>
                                         <label class="block text-xs font-bold text-slate-700 mb-1">Bairro</label>
-                                        <input type="text" value="${esc(window.state.editingStore.neighborhood)}" oninput="state.editingStore.neighborhood=this.value" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs"/>
+                                        <input type="text" value="\${esc(window.state.editingStore.neighborhood)}" oninput="state.editingStore.neighborhood=this.value" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs"/>
                                     </div>
                                     <div>
                                         <label class="block text-xs font-bold text-slate-700 mb-1">Categoria</label>
                                         <select onchange="state.editingStore.category=this.value" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs">
-                                            <option value="Supermercado" ${window.state.editingStore.category === 'Supermercado' ? 'selected' : ''}>Supermercado</option>
-                                            <option value="Atacarejo" ${window.state.editingStore.category === 'Atacarejo' ? 'selected' : ''}>Atacarejo</option>
-                                            <option value="Hipermercado" ${window.state.editingStore.category === 'Hipermercado' ? 'selected' : ''}>Hipermercado</option>
-                                            <option value="Gourmet" ${window.state.editingStore.category === 'Gourmet' ? 'selected' : ''}>Gourmet</option>
+                                            <option value="Supermercado" \${window.state.editingStore.category === 'Supermercado' ? 'selected' : ''}>Supermercado</option>
+                                            <option value="Atacarejo" \${window.state.editingStore.category === 'Atacarejo' ? 'selected' : ''}>Atacarejo</option>
+                                            <option value="Hipermercado" \${window.state.editingStore.category === 'Hipermercado' ? 'selected' : ''}>Hipermercado</option>
+                                            <option value="Gourmet" \${window.state.editingStore.category === 'Gourmet' ? 'selected' : ''}>Gourmet</option>
                                         </select>
                                     </div>
                                 </div>
                                 <div>
                                     <label class="block text-xs font-bold text-slate-700 mb-1">Endereço Completo</label>
-                                    <input type="text" value="${esc(window.state.editingStore.address)}" oninput="state.editingStore.address=this.value" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs"/>
+                                    <input type="text" value="\${esc(window.state.editingStore.address)}" oninput="state.editingStore.address=this.value" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs"/>
                                 </div>
                                 <div class="pt-3 border-t flex justify-end gap-2">
                                     <button type="button" onclick="window.closeModals()" class="px-4 py-2 text-slate-600 text-xs font-bold">Cancelar</button>
@@ -682,7 +633,7 @@
                         <div class="bg-white w-full max-w-md rounded-2xl shadow-xl p-6 space-y-4 text-center">
                             <div class="w-12 h-12 bg-rose-100 text-rose-600 rounded-2xl flex items-center justify-center mx-auto"><i data-lucide="trash-2" class="w-6 h-6"></i></div>
                             <h3 class="text-lg font-bold text-slate-900">Excluir Supermercado?</h3>
-                            <p class="text-xs text-slate-600">Remover "${esc(window.state.storeToDelete.name)}" do catálogo?</p>
+                            <p class="text-xs text-slate-600">Remover "\${esc(window.state.storeToDelete.name)}" do banco de dados?</p>
                             <div class="flex items-center gap-2 pt-2">
                                 <button onclick="window.closeModals()" class="flex-1 py-2.5 bg-slate-100 rounded-xl text-xs font-bold">Cancelar</button>
                                 <button onclick="window.confirmDeleteStore()" class="flex-1 py-2.5 bg-rose-600 text-white rounded-xl text-xs font-bold">Sim, Excluir</button>
@@ -703,30 +654,30 @@
                                     <label class="block text-xs font-bold text-slate-800 mb-1">Selecione a Loja *</label>
                                     <select required onchange="state.reviewForm.storeId=this.value" class="w-full px-3 py-2.5 bg-white border border-slate-300 rounded-xl text-xs font-medium">
                                         <option value="">-- Selecione --</option>
-                                        ${window.state.stores.map(s => `<option value="${s.id}" ${window.state.reviewForm.storeId === s.id ? 'selected' : ''}>${esc(s.name)} (${esc(s.address)})</option>`).join('')}
+                                        \${window.state.stores.map(s => `<option value="${s.id}" ${window.state.reviewForm.storeId === s.id ? 'selected' : ''}>${esc(s.name)} (${esc(s.address)})</option>`).join('')}
                                     </select>
                                 </div>
                                 <div class="grid grid-cols-3 gap-3">
                                     <div>
                                         <label class="block text-xs font-bold text-slate-700 mb-1">Função</label>
                                         <select onchange="state.reviewForm.role=this.value" class="w-full px-3 py-2 bg-slate-50 border rounded-xl text-xs">
-                                            <option value="Promotor de Vendas" ${window.state.reviewForm.role === 'Promotor de Vendas' ? 'selected' : ''}>Promotor de Vendas</option>
-                                            <option value="Repositor Extra" ${window.state.reviewForm.role === 'Repositor Extra' ? 'selected' : ''}>Repositor Extra</option>
-                                            <option value="Operador de Caixa" ${window.state.reviewForm.role === 'Operador de Caixa' ? 'selected' : ''}>Operador de Caixa</option>
+                                            <option value="Promotor de Vendas" \${window.state.reviewForm.role === 'Promotor de Vendas' ? 'selected' : ''}>Promotor de Vendas</option>
+                                            <option value="Repositor Extra" \${window.state.reviewForm.role === 'Repositor Extra' ? 'selected' : ''}>Repositor Extra</option>
+                                            <option value="Operador de Caixa" \${window.state.reviewForm.role === 'Operador de Caixa' ? 'selected' : ''}>Operador de Caixa</option>
                                         </select>
                                     </div>
                                     <div>
                                         <label class="block text-xs font-bold text-slate-700 mb-1">Vínculo</label>
                                         <select onchange="state.reviewForm.status=this.value" class="w-full px-3 py-2 bg-slate-50 border rounded-xl text-xs">
-                                            <option value="Atual" ${window.state.reviewForm.status === 'Atual' ? 'selected' : ''}>Atua Atualmente</option>
-                                            <option value="Ex-freelancer" ${window.state.reviewForm.status === 'Ex-freelancer' ? 'selected' : ''}>Já atuou</option>
+                                            <option value="Atual" \${window.state.reviewForm.status === 'Atual' ? 'selected' : ''}>Atua Atualmente</option>
+                                            <option value="Ex-freelancer" \${window.state.reviewForm.status === 'Ex-freelancer' ? 'selected' : ''}>Já atuou</option>
                                         </select>
                                     </div>
                                     <div>
                                         <label class="block text-xs font-bold text-slate-700 mb-1">Tempo</label>
                                         <select onchange="state.reviewForm.period=this.value" class="w-full px-3 py-2 bg-slate-50 border rounded-xl text-xs">
-                                            <option value="1 a 6 meses" ${window.state.reviewForm.period === '1 a 6 meses' ? 'selected' : ''}>1 a 6 meses</option>
-                                            <option value="Mais de 6 meses" ${window.state.reviewForm.period === 'Mais de 6 meses' ? 'selected' : ''}>Mais de 6 meses</option>
+                                            <option value="1 a 6 meses" \${window.state.reviewForm.period === '1 a 6 meses' ? 'selected' : ''}>1 a 6 meses</option>
+                                            <option value="Mais de 6 meses" \${window.state.reviewForm.period === 'Mais de 6 meses' ? 'selected' : ''}>Mais de 6 meses</option>
                                         </select>
                                     </div>
                                 </div>
@@ -734,42 +685,42 @@
                                     <div class="bg-amber-50 p-3 rounded-xl border border-amber-200">
                                         <label class="text-xs font-bold block mb-1">Oferece café?</label>
                                         <div class="grid grid-cols-2 gap-2">
-                                            <button type="button" onclick="state.reviewForm.coffee='SIM';render()" class="py-2 rounded-xl text-xs font-bold border ${window.state.reviewForm.coffee === 'SIM' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-700'}">SIM</button>
-                                            <button type="button" onclick="state.reviewForm.coffee='NÃO';render()" class="py-2 rounded-xl text-xs font-bold border ${window.state.reviewForm.coffee === 'NÃO' ? 'bg-rose-600 text-white border-rose-600' : 'bg-white text-slate-700'}">NÃO</button>
+                                            <button type="button" onclick="state.reviewForm.coffee='SIM';render()" class="py-2 rounded-xl text-xs font-bold border \${window.state.reviewForm.coffee === 'SIM' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-700'}">SIM</button>
+                                            <button type="button" onclick="state.reviewForm.coffee='NÃO';render()" class="py-2 rounded-xl text-xs font-bold border \${window.state.reviewForm.coffee === 'NÃO' ? 'bg-rose-600 text-white border-rose-600' : 'bg-white text-slate-700'}">NÃO</button>
                                         </div>
                                     </div>
                                     <div class="bg-orange-50 p-3 rounded-xl border border-orange-200">
                                         <label class="text-xs font-bold block mb-1">Oferece almoço?</label>
                                         <div class="grid grid-cols-2 gap-2">
-                                            <button type="button" onclick="state.reviewForm.lunch='SIM';render()" class="py-2 rounded-xl text-xs font-bold border ${window.state.reviewForm.lunch === 'SIM' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-700'}">SIM</button>
-                                            <button type="button" onclick="state.reviewForm.lunch='NÃO';render()" class="py-2 rounded-xl text-xs font-bold border ${window.state.reviewForm.lunch === 'NÃO' ? 'bg-rose-600 text-white border-rose-600' : 'bg-white text-slate-700'}">NÃO</button>
+                                            <button type="button" onclick="state.reviewForm.lunch='SIM';render()" class="py-2 rounded-xl text-xs font-bold border \${window.state.reviewForm.lunch === 'SIM' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-700'}">SIM</button>
+                                            <button type="button" onclick="state.reviewForm.lunch='NÃO';render()" class="py-2 rounded-xl text-xs font-bold border \${window.state.reviewForm.lunch === 'NÃO' ? 'bg-rose-600 text-white border-rose-600' : 'bg-white text-slate-700'}">NÃO</button>
                                         </div>
                                     </div>
                                     <div class="bg-purple-50 p-3 rounded-xl border border-purple-200">
                                         <label class="text-xs font-bold block mb-1">Tem micro-ondas?</label>
                                         <div class="grid grid-cols-2 gap-2">
-                                            <button type="button" onclick="state.reviewForm.microwave='SIM';render()" class="py-2 rounded-xl text-xs font-bold border ${window.state.reviewForm.microwave === 'SIM' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-700'}">SIM</button>
-                                            <button type="button" onclick="state.reviewForm.microwave='NÃO';render()" class="py-2 rounded-xl text-xs font-bold border ${window.state.reviewForm.microwave === 'NÃO' ? 'bg-rose-600 text-white border-rose-600' : 'bg-white text-slate-700'}">NÃO</button>
+                                            <button type="button" onclick="state.reviewForm.microwave='SIM';render()" class="py-2 rounded-xl text-xs font-bold border \${window.state.reviewForm.microwave === 'SIM' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-700'}">SIM</button>
+                                            <button type="button" onclick="state.reviewForm.microwave='NÃO';render()" class="py-2 rounded-xl text-xs font-bold border \${window.state.reviewForm.microwave === 'NÃO' ? 'bg-rose-600 text-white border-rose-600' : 'bg-white text-slate-700'}">NÃO</button>
                                         </div>
                                     </div>
                                     <div class="bg-indigo-50 p-3 rounded-xl border border-indigo-200">
                                         <label class="text-xs font-bold block mb-1">Respeita pausa no tempo certo?</label>
                                         <div class="grid grid-cols-2 gap-2">
-                                            <button type="button" onclick="state.reviewForm.breakTime='SIM';render()" class="py-2 rounded-xl text-xs font-bold border ${window.state.reviewForm.breakTime === 'SIM' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-700'}">SIM</button>
-                                            <button type="button" onclick="state.reviewForm.breakTime='NÃO';render()" class="py-2 rounded-xl text-xs font-bold border ${window.state.reviewForm.breakTime === 'NÃO' ? 'bg-rose-600 text-white border-rose-600' : 'bg-white text-slate-700'}">NÃO</button>
+                                            <button type="button" onclick="state.reviewForm.breakTime='SIM';render()" class="py-2 rounded-xl text-xs font-bold border \${window.state.reviewForm.breakTime === 'SIM' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-700'}">SIM</button>
+                                            <button type="button" onclick="state.reviewForm.breakTime='NÃO';render()" class="py-2 rounded-xl text-xs font-bold border \${window.state.reviewForm.breakTime === 'NÃO' ? 'bg-rose-600 text-white border-rose-600' : 'bg-white text-slate-700'}">NÃO</button>
                                         </div>
                                     </div>
                                     <div>
-                                        <label class="text-xs font-bold block mb-1">Gestão flexível (1 a 5): <span id="flexLabel" class="text-blue-600">${window.state.reviewForm.flexibility}</span></label>
-                                        <input type="range" min="1" max="5" value="${window.state.reviewForm.flexibility}" oninput="state.reviewForm.flexibility=this.value;document.getElementById('flexLabel').textContent=this.value" class="w-full accent-blue-600"/>
+                                        <label class="text-xs font-bold block mb-1">Gestão flexível (1 a 5): <span id="flexLabel" class="text-blue-600">\${window.state.reviewForm.flexibility}</span></label>
+                                        <input type="range" min="1" max="5" value="\${window.state.reviewForm.flexibility}" oninput="state.reviewForm.flexibility=this.value;document.getElementById('flexLabel').textContent=this.value" class="w-full accent-blue-600"/>
                                     </div>
                                     <div>
                                         <label class="block text-xs font-bold text-slate-700 mb-1">Depoimento *</label>
-                                        <textarea required rows="3" oninput="state.reviewForm.comment=this.value" placeholder="Descreva a rotina..." class="w-full px-3 py-2 bg-slate-50 border rounded-xl text-xs">${esc(window.state.reviewForm.comment)}</textarea>
+                                        <textarea required rows="3" oninput="state.reviewForm.comment=this.value" placeholder="Descreva a rotina..." class="w-full px-3 py-2 bg-slate-50 border rounded-xl text-xs">\${esc(window.state.reviewForm.comment)}</textarea>
                                     </div>
                                     <div class="flex items-center justify-between bg-slate-100 p-3 rounded-xl">
                                         <span class="text-xs font-bold">Publicar de forma Anônima?</span>
-                                        <input type="checkbox" ${window.state.reviewForm.isAnonymous ? 'checked' : ''} onchange="state.reviewForm.isAnonymous=this.checked" class="w-4 h-4 accent-emerald-600"/>
+                                        <input type="checkbox" \${window.state.reviewForm.isAnonymous ? 'checked' : ''} onchange="state.reviewForm.isAnonymous=this.checked" class="w-4 h-4 accent-emerald-600"/>
                                     </div>
                                 </div>
                                 <div class="pt-3 border-t flex justify-end gap-3">
@@ -786,16 +737,15 @@
                         <div class="bg-white w-full max-w-3xl rounded-2xl shadow-xl overflow-hidden my-8 max-h-[90vh] flex flex-col">
                             <div class="p-5 bg-slate-900 text-white flex items-center justify-between">
                                 <div>
-                                    <span class="text-[10px] font-extrabold uppercase text-emerald-400 bg-emerald-950 px-2 py-0.5 rounded border border-emerald-800">${esc(window.state.selectedStoreDetail.category)}</span>
-                                    <h3 class="text-lg font-bold pt-1">${esc(window.state.selectedStoreDetail.name)}</h3>
-                                    <p class="text-xs text-slate-400"><i data-lucide="map-pin" class="w-3.5 h-3.5 inline text-emerald-400"></i> ${esc(window.state.selectedStoreDetail.address)}</p>
+                                    <span class="text-[10px] font-extrabold uppercase text-emerald-400 bg-emerald-950 px-2 py-0.5 rounded border border-emerald-800">\${esc(window.state.selectedStoreDetail.category)}</span>
+                                    <h3 class="text-lg font-bold pt-1">\${esc(window.state.selectedStoreDetail.name)}</h3>
+                                    <p class="text-xs text-slate-400"><i data-lucide="map-pin" class="w-3.5 h-3.5 inline text-emerald-400"></i> \${esc(window.state.selectedStoreDetail.address)}</p>
                                 </div>
                                 <button onclick="window.closeModals()"><i data-lucide="x" class="w-5 h-5"></i></button>
                             </div>
                             <div class="p-6 space-y-6 overflow-y-auto flex-1">
                                 <div class="space-y-3">
-                                    <h4 class="text-xs font-extrabold uppercase text-slate-500">Depoimentos (${window.state.selectedStoreDetail.reviews.length})</h4>
-                                    ${window.state.selectedStoreDetail.reviews.length === 0 ? '<p class="text-xs text-slate-400 italic">Nenhum depoimento ainda.</p>' : window.state.selectedStoreDetail.reviews.map(r => `
+                                    <h4 class="text-xs font-extrabold uppercase text-slate-500">Depoimentos (${window.state.selectedStoreDetail.reviews.length})</h4>${window.state.selectedStoreDetail.reviews.length === 0 ? '<p class="text-xs text-slate-400 italic">Nenhum depoimento ainda.</p>' : window.state.selectedStoreDetail.reviews.map(r => `
                                         <div class="bg-slate-50 p-4 rounded-xl border space-y-2 text-xs">
                                             <div class="flex items-center justify-between border-b pb-2">
                                                 <span class="font-bold text-slate-800">${esc(r.userName)} <span class="text-[10px] bg-slate-200 px-2 py-0.5 rounded">${esc(r.role)} • ${esc(r.status)}</span></span>
@@ -821,7 +771,7 @@
 
                 <footer class="bg-slate-900 text-slate-400 text-xs py-6 border-t border-slate-800">
                     <div class="max-w-7xl mx-auto px-4 text-center space-y-2">
-                        <p class="font-semibold text-slate-300">FreeEval Supermercados © 2026 — Plataforma Colaborativa</p>
+                        <p class="font-semibold text-slate-300">FreeEval Supermercados — Conectado ao Firebase Cloud Firestore</p>
                     </div>
                 </footer>
             `;
@@ -852,43 +802,5 @@
 
         render();
     </script>
-<!-- Code injected by live-server -->
-<script>
-	// <![CDATA[  <-- For SVG support
-	if ('WebSocket' in window) {
-		(function () {
-			function refreshCSS() {
-				var sheets = [].slice.call(document.getElementsByTagName("link"));
-				var head = document.getElementsByTagName("head")[0];
-				for (var i = 0; i < sheets.length; ++i) {
-					var elem = sheets[i];
-					var parent = elem.parentElement || head;
-					parent.removeChild(elem);
-					var rel = elem.rel;
-					if (elem.href && typeof rel != "string" || rel.length == 0 || rel.toLowerCase() == "stylesheet") {
-						var url = elem.href.replace(/(&|\?)_cacheOverride=\d+/, '');
-						elem.href = url + (url.indexOf('?') >= 0 ? '&' : '?') + '_cacheOverride=' + (new Date().valueOf());
-					}
-					parent.appendChild(elem);
-				}
-			}
-			var protocol = window.location.protocol === 'http:' ? 'ws://' : 'wss://';
-			var address = protocol + window.location.host + window.location.pathname + '/ws';
-			var socket = new WebSocket(address);
-			socket.onmessage = function (msg) {
-				if (msg.data == 'reload') window.location.reload();
-				else if (msg.data == 'refreshcss') refreshCSS();
-			};
-			if (sessionStorage && !sessionStorage.getItem('IsThisFirstTime_Log_From_LiveServer')) {
-				console.log('Live reload enabled.');
-				sessionStorage.setItem('IsThisFirstTime_Log_From_LiveServer', true);
-			}
-		})();
-	}
-	else {
-		console.error('Upgrade your browser. This Browser is NOT supported WebSocket for Live-Reloading.');
-	}
-	// ]]>
-</script>
 </body>
 </html>
