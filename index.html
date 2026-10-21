@@ -26,14 +26,23 @@
         // =========================================================================
         // 1. COLE AQUI AS CHAVES COPIADAS DO SEU FIREBASE CONSOLE:
         // =========================================================================
-        const firebaseConfig = {
-            apiKey: "SUA_API_KEY_AQUI",
-            authDomain: "SEU_PROJETO.firebaseapp.com",
-            projectId: "SEU_PROJETO_ID",
-            storageBucket: "SEU_PROJETO.firebasestorage.app",
-            messagingSenderId: "12345678900",
-            appId: "1:12345678900:web:abcdef123456"
-        };
+        // Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyBvM37fvOQ3_HNTdMNIeA7dqZf7tm-4ICI",
+  authDomain: "freeeval-supermercados-47423.firebaseapp.com",
+  projectId: "freeeval-supermercados-47423",
+  storageBucket: "freeeval-supermercados-47423.firebasestorage.app",
+  messagingSenderId: "539981908874",
+  appId: "1:539981908874:web:b1c272b4d5a1d03f5d9673"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
 
         // =========================================================================
         // 2. SEU E-MAIL GOOGLE PARA TER PERMISSÃO DE ADMINISTRADOR (CADASTRAR LOJAS)
