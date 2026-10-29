@@ -1213,8 +1213,9 @@
     let usuarioGoogleLogado = null;
 
     // CONFIGURAÇÃO REAL DO GOOGLE SIGN-IN
-    // Cole abaixo o seu Client ID gerado no Google Cloud Console:
-    const GOOGLE_CLIENT_ID = "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";
+    // ⚠️ ATENÇÃO: Cole abaixo o seu "ID do Cliente" (Client ID) que termina em .apps.googleusercontent.com
+    // NÃO USE o Client Secret que começa com GOCSPX-
+    const GOOGLE_CLIENT_ID = "806340783620-dt1mget11up1ecsm1c6b90hjvkbifi3r.apps.googleusercontent.com";
 
     let grupoAtivo = 'todos';
     let plataformaAtiva = 'todas';
@@ -1274,8 +1275,14 @@
 
     function inicializarGoogleSignIn() {
       const msgAviso = document.getElementById('msgClientIdAviso');
+      const containerBtn = document.getElementById('g_id_signin');
+
+      // Verifica se o ID do cliente é válido (deve terminar em .apps.googleusercontent.com e não ser GOCSPX-)
+      const idValido = typeof GOOGLE_CLIENT_ID === 'string' && 
+                       GOOGLE_CLIENT_ID.endsWith('.apps.googleusercontent.com') && 
+                       !GOOGLE_CLIENT_ID.startsWith('GOCSPX-');
       
-      if (typeof google !== 'undefined' && google.accounts && GOOGLE_CLIENT_ID && GOOGLE_CLIENT_ID !== "SEU_CLIENT_ID_AQUI.apps.googleusercontent.com") {
+      if (typeof google !== 'undefined' && google.accounts && idValido) {
         if (msgAviso) msgAviso.classList.add('hidden');
         
         google.accounts.id.initialize({
@@ -1283,7 +1290,6 @@
           callback: handleGoogleCredentialResponse
         });
 
-        const containerBtn = document.getElementById('g_id_signin');
         if (containerBtn) {
           containerBtn.innerHTML = '';
           google.accounts.id.renderButton(containerBtn, {
@@ -1295,7 +1301,20 @@
           });
         }
       } else {
-        if (msgAviso) msgAviso.classList.remove('hidden');
+        if (msgAviso) {
+          msgAviso.classList.remove('hidden');
+          msgAviso.innerHTML = `
+            💡 <strong>Atenção:</strong> Cole seu <strong>Client ID</strong> (terminado em <code>.apps.googleusercontent.com</code>) na constante <code>GOOGLE_CLIENT_ID</code> do código para ativar o botão oficial.<br>
+            <span class="text-rose-600 font-bold">Nota: Chaves GOCSPX-... (Client Secret) não funcionam aqui.</span>
+          `;
+        }
+        if (containerBtn) {
+          containerBtn.innerHTML = `
+            <div class="text-xs text-slate-500 py-1 font-medium">
+              Configure o Client ID correto no código ou entre digitando seu nome abaixo:
+            </div>
+          `;
+        }
       }
     }
 
