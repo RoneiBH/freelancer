@@ -1,815 +1,2379 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" class="scroll-smooth overflow-x-hidden w-full">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FreeEval Supermercados</title>
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Lucide Icons -->
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <!-- Google Fonts Inter -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <style>
-        body { font-family: 'Inter', sans-serif; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Guia &amp; Freela - Avaliações de Lojas e Anúncios Freelance PWA</title>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <!-- Fonte Google Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#f0f6ff',
+              100: '#e0edff',
+              500: '#2563eb',
+              600: '#1d4ed8',
+              700: '#1e40af',
+              900: '#0f172a',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Guardrails para evitar estouro horizontal em qualquer smartphone */
+    html, body {
+      overflow-x: hidden !important;
+      width: 100% !important;
+      max-width: 100% !important;
+    }
+
+    /* Custom Scrollbars */
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    
+    /* Star Rating Animations */
+    .star-btn { transition: transform 0.15s ease, color 0.15s ease; }
+    .star-btn:hover { transform: scale(1.25); }
+
+    /* Custom Transitions */
+    .card-hover { transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); }
+    .card-hover:hover { transform: translateY(-3px); }
+
+    /* Animações de Destaque */
+    @keyframes pulseBronze {
+      0%, 100% { transform: scale(1); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+      50% { transform: scale(1.03); box-shadow: 0 0 10px rgba(217, 119, 6, 0.8); }
+    }
+    .animate-pulse-bronze { animation: pulseBronze 2.8s infinite ease-in-out; }
+
+    @keyframes pulseSilver {
+      0%, 100% { transform: scale(1); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+      50% { transform: scale(1.03); box-shadow: 0 0 10px rgba(148, 163, 184, 0.8); }
+    }
+    .animate-pulse-silver { animation: pulseSilver 2.8s infinite ease-in-out; }
+
+    @keyframes pulseSlow {
+      0%, 100% { transform: scale(1); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+      50% { transform: scale(1.03); box-shadow: 0 0 10px rgba(245, 158, 11, 0.8); }
+    }
+    .animate-pulse-slow { animation: pulseSlow 2.8s infinite ease-in-out; }
+
+    @keyframes pulseRed {
+      0%, 100% { transform: scale(1); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+      50% { transform: scale(1.03); box-shadow: 0 0 10px rgba(244, 63, 94, 0.8); }
+    }
+    .animate-pulse-red { animation: pulseRed 2.8s infinite ease-in-out; }
+  </style>
 </head>
-<body class="min-h-screen bg-slate-100 text-slate-800 flex flex-col">
+<body class="bg-slate-50 text-slate-800 font-sans antialiased min-h-screen flex flex-col justify-between pb-28 w-full max-w-full overflow-x-hidden">
 
-    <div id="root" class="flex flex-col min-h-screen"></div>
+  <!-- Container de Notificações Toast -->
+  <div id="toastContainer" class="fixed top-4 right-4 z-50 space-y-2 pointer-events-none max-w-[90vw]"></div>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, onSnapshot, doc, setDoc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+  <!-- ==================== HEADER FIXO ==================== -->
+  <header class="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-sm w-full">
+    <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-14 sm:h-16 gap-1.5 sm:gap-3">
+        
+        <!-- Logo -->
+        <a href="#" class="flex items-center gap-2 text-brand-600 font-black text-lg sm:text-2xl tracking-tight shrink-0">
+          <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-gradient-to-tr from-brand-600 to-indigo-600 text-white flex items-center justify-center shadow-md shadow-brand-500/20">
+            <i class="fa-solid fa-store text-sm sm:text-lg"></i>
+          </div>
+          <span class="truncate max-w-[130px] sm:max-w-none">Guia<span class="text-emerald-500">&amp;</span>Freela</span>
+        </a>
 
-        // =========================================================================
-        // 1. COLE AQUI AS CHAVES COPIADAS DO SEU FIREBASE CONSOLE:
-        // =========================================================================
-        // Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
+        <!-- Barra de Busca em Tempo Real (Desktop) -->
+        <div class="hidden md:flex flex-1 max-w-md mx-4 relative">
+          <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+          <input 
+            type="text" 
+            id="searchInputDesktop"
+            oninput="filtrarGeral(this.value)"
+            placeholder="Buscar Supernosso, Carrefour, Assaí, Mart Minas..." 
+            class="w-full pl-10 pr-9 py-2 bg-slate-100 hover:bg-slate-100 focus:bg-white text-xs sm:text-sm rounded-full border border-transparent focus:border-brand-500 focus:outline-none transition-all duration-200"
+          >
+          <button id="clearSearchBtn" onclick="limparBusca()" class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+            <i class="fa-solid fa-circle-xmark text-xs"></i>
+          </button>
+        </div>
 
-// Your web app's Firebase configuration
-const firebaseConfig = {
-  apiKey: "AIzaSyBvM37fvOQ3_HNTdMNIeA7dqZf7tm-4ICI",
-  authDomain: "freeeval-supermercados-47423.firebaseapp.com",
-  projectId: "freeeval-supermercados-47423",
-  storageBucket: "freeeval-supermercados-47423.firebasestorage.app",
-  messagingSenderId: "539981908874",
-  appId: "1:539981908874:web:b1c272b4d5a1d03f5d9673"
-};
+        <!-- Links de Navegação (Desktop) -->
+        <nav class="hidden lg:flex items-center gap-5 text-xs sm:text-sm font-semibold text-slate-600">
+          <a href="#plataformas" class="hover:text-brand-600 transition">Lojas</a>
+          <a href="#freelancers" class="hover:text-brand-600 transition">Freelancers</a>
+          <a href="#enquetes" class="hover:text-brand-600 transition">Enquetes</a>
+          <button id="btnCadastrarLojaNav" onclick="abrirModal('modalCadastrarLoja')" class="hidden text-emerald-600 hover:text-emerald-700 transition flex items-center gap-1 font-bold">
+            <i class="fa-solid fa-plus-circle"></i> Cadastrar Loja
+          </button>
+          <button id="btnCriarEnqueteNav" onclick="abrirModalCriarEnquete()" class="hidden text-purple-600 hover:text-purple-700 transition flex items-center gap-1 font-bold">
+            <i class="fa-solid fa-square-poll-vertical"></i> Criar Enquete
+          </button>
+          <button onclick="abrirModal('modalAnunciarFreela')" class="text-brand-600 hover:text-brand-700 transition flex items-center gap-1 font-bold">
+            <i class="fa-solid fa-bullhorn"></i> Anunciar Freela
+          </button>
+        </nav>
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
+        <!-- Modos de Acesso Otimizados para Mobile -->
+        <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          <!-- Toggle de Administrador -->
+          <button id="btnToggleAdmin" onclick="toggleModoAdmin()" class="bg-slate-800 hover:bg-slate-900 text-slate-200 text-xs font-bold px-2.5 py-1.5 rounded-full border border-slate-700 transition flex items-center gap-1" title="Alternar Modo Admin">
+            <i class="fa-solid fa-user-shield text-amber-400 text-xs"></i>
+            <span id="labelModoAdmin" class="hidden sm:inline">Modo Admin: OFF</span>
+          </button>
 
-        // =========================================================================
-        // 2. SEU E-MAIL GOOGLE PARA TER PERMISSÃO DE ADMINISTRADOR (CADASTRAR LOJAS)
-        // =========================================================================
-        const AUTHORIZED_ADMIN_EMAIL = 'seu-email@gmail.com';
+          <!-- Status do Login Google / Perfil -->
+          <div id="containerUserAuth">
+            <button onclick="abrirModal('modalGoogleLogin')" class="bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-xs font-bold px-2.5 py-1.5 rounded-full shadow-sm transition flex items-center gap-1.5 active:scale-95">
+              <i class="fa-brands fa-google text-red-500 text-xs sm:text-sm"></i>
+              <span class="hidden sm:inline">Entrar com Google</span>
+              <span class="sm:hidden text-[11px]">Entrar</span>
+            </button>
+          </div>
 
-        const firebaseReady = Boolean(firebaseConfig.apiKey && firebaseConfig.apiKey !== "SUA_API_KEY_AQUI");
-        const app = firebaseReady ? initializeApp(firebaseConfig) : null;
-        const auth = firebaseReady ? getAuth(app) : null;
-        const db = firebaseReady ? getFirestore(app) : null;
+          <button onclick="toggleMobileMenu()" class="lg:hidden p-1.5 text-slate-600 hover:text-slate-900 rounded-lg active:bg-slate-100">
+            <i class="fa-solid fa-bars text-lg"></i>
+          </button>
+        </div>
 
-        const LOCAL_STORAGE_KEY = 'freeeval_stores_v10';
+      </div>
 
-        const DEFAULT_INITIAL_STORES = [
-            {
-                id: 'store_1',
-                name: 'Supermercados BH - Savassi',
-                neighborhood: 'Savassi',
-                address: 'Av. do Contorno, 6000 - Bairro Savassi - Belo Horizonte, MG',
-                category: 'Supermercado',
-                registeredBy: 'Administrador',
-                stats: {
-                    coffee: { yes: 39, no: 3 },
-                    lunch: { yes: 40, no: 2 },
-                    microwave: { yes: 35, no: 7 },
-                    breakTime: { yes: 41, no: 1 },
-                    flexibility: 4.8
-                },
-                reviews: [
-                    {
-                        id: 'r1',
-                        role: 'Promotor de Vendas',
-                        status: 'Atual',
-                        period: '6 meses',
-                        isAnonymous: false,
-                        userName: 'Carlos Eduardo M.',
-                        date: 'Há 2 dias',
-                        rating: 5,
-                        coffee: 'SIM',
-                        lunch: 'SIM',
-                        microwave: 'SIM',
-                        breakTime: 'SIM',
-                        flexibility: 5,
-                        comment: 'Excelente loja para trabalhar! O refeitório conta com micro-ondas em bom estado e café nos dois turnos.'
-                    }
-                ]
-            }
-        ];
+      <!-- Barra de Busca Mobile -->
+      <div class="md:hidden pb-2.5 pt-0.5 w-full">
+        <div class="relative w-full">
+          <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+          <input 
+            type="text" 
+            id="searchInputMobile"
+            oninput="filtrarGeral(this.value)"
+            placeholder="Buscar Supernosso, Carrefour, Assaí, Mart Minas..." 
+            class="w-full pl-8 pr-8 py-1.5 bg-slate-100 text-xs rounded-full border border-transparent focus:border-brand-500 focus:bg-white focus:outline-none"
+          >
+        </div>
+      </div>
+    </div>
 
-        window.state = {
-            user: null,
-            userRole: 'FREELANCER',
-            searchTerm: '',
-            selectedCategory: 'ALL',
-            sortBy: 'RATING',
-            stores: (() => {
-                try {
-                    const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
-                    if (saved) return JSON.parse(saved);
-                } catch(e) {}
-                return DEFAULT_INITIAL_STORES;
-            })(),
-            selectedStoreDetail: null,
-            isReviewModalOpen: false,
-            isAddStoreModalOpen: false,
-            isEditStoreModalOpen: false,
-            isAuthModalOpen: false,
-            editingStore: null,
-            storeToDelete: null,
-            toastMsg: '',
-            reviewForm: {
-                storeId: '',
-                role: 'Promotor de Vendas',
-                status: 'Atual',
-                period: '1 a 6 meses',
-                isAnonymous: false,
-                rating: 5,
-                coffee: 'SIM',
-                lunch: 'SIM',
-                microwave: 'SIM',
-                breakTime: 'SIM',
-                flexibility: 5,
-                comment: ''
-            },
-            newStoreForm: {
-                name: '',
-                neighborhood: '',
-                address: '',
-                category: 'Supermercado',
-                cityState: 'Belo Horizonte, MG'
-            }
-        };
+    <!-- Menu Dropdown Mobile -->
+    <div id="mobileMenu" class="hidden lg:hidden border-t border-slate-200 bg-white px-4 py-3 space-y-2 text-sm font-semibold w-full">
+      <a href="#plataformas" onclick="toggleMobileMenu()" class="block py-2 text-slate-700 hover:text-brand-600">Lojas por Plataforma</a>
+      <a href="#freelancers" onclick="toggleMobileMenu()" class="block py-2 text-slate-700 hover:text-brand-600">Anúncios Freelancers</a>
+      <a href="#enquetes" onclick="toggleMobileMenu()" class="block py-2 text-slate-700 hover:text-brand-600">Enquetes da Comunidade</a>
+      <button id="btnCadastrarLojaMobile" onclick="toggleMobileMenu(); abrirModal('modalCadastrarLoja')" class="hidden w-full text-left py-2 text-emerald-600 font-bold flex items-center gap-2">
+        <i class="fa-solid fa-plus-circle"></i> Cadastrar Nova Loja
+      </button>
+      <button id="btnCriarEnqueteMobile" onclick="toggleMobileMenu(); abrirModalCriarEnquete()" class="hidden w-full text-left py-2 text-purple-600 font-bold flex items-center gap-2">
+        <i class="fa-solid fa-square-poll-vertical"></i> Criar Nova Enquete
+      </button>
+      <button onclick="toggleMobileMenu(); abrirModal('modalAnunciarFreela')" class="w-full text-left py-2 text-brand-600 font-bold flex items-center gap-2">
+        <i class="fa-solid fa-bullhorn"></i> Anunciar como Freelancer
+      </button>
+      <button onclick="toggleMobileMenu(); toggleModoAdmin()" class="w-full text-left py-2 text-amber-600 font-bold flex items-center gap-2 border-t border-slate-100 pt-2">
+        <i class="fa-solid fa-user-shield"></i> <span id="labelModoAdminMobile">Alternar Modo Admin</span>
+      </button>
+    </div>
+  </header>
 
-        function showToast(msg) {
-            window.state.toastMsg = msg;
-            render();
-            setTimeout(() => {
-                window.state.toastMsg = '';
-                render();
-            }, 3500);
+  <!-- ==================== BANNER HERO DE BOAS-VINDAS ==================== -->
+  <section class="bg-gradient-to-r from-slate-900 via-indigo-950 to-brand-900 text-white py-6 sm:py-8 px-4 sm:px-6 lg:px-8 border-b border-slate-800 relative overflow-hidden w-full">
+    <div class="absolute -right-10 -bottom-10 w-64 h-64 bg-brand-500/10 rounded-full blur-3xl pointer-events-none"></div>
+    <div class="absolute right-1/3 -top-10 w-48 h-48 bg-purple-500/10 rounded-full blur-2xl pointer-events-none"></div>
+
+    <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4 sm:gap-6 relative z-10">
+      <div class="space-y-2 sm:space-y-3 text-center md:text-left max-w-2xl w-full">
+        <div class="inline-flex items-center gap-1.5 bg-white/10 backdrop-blur-md px-2.5 py-1 rounded-full text-[11px] sm:text-xs font-semibold text-brand-100 border border-white/10 max-w-full">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0"></span>
+          <span class="truncate">Guia do Varejo &amp; Reposição Freelance • Minas Gerais</span>
+        </div>
+        <h1 class="text-xl sm:text-3xl md:text-4xl font-black tracking-tight leading-snug sm:leading-tight">
+          Avalie Lojas e Encontre Oportunidades de Freelance
+        </h1>
+        <p class="text-slate-300 text-xs sm:text-sm leading-relaxed">
+          Atendendo às redes <strong class="text-emerald-300">Grupo Supernosso</strong>, <strong class="text-blue-300">Grupo Carrefour</strong>, <strong class="text-amber-300">Assaí MG</strong> e <strong class="text-orange-300">Mart Minas</strong> via Anthor, Hellpi, Zubale e direto!
+        </p>
+      </div>
+
+      <div class="flex flex-col sm:flex-row gap-2.5 w-full sm:w-auto shrink-0">
+        <button id="btnCadastrarLojaHero" onclick="abrirModal('modalCadastrarLoja')" class="hidden bg-emerald-500 hover:bg-emerald-600 text-white font-bold px-4 py-2.5 rounded-xl shadow-lg transition text-xs sm:text-sm flex items-center justify-center gap-2 w-full sm:w-auto">
+          <i class="fa-solid fa-store"></i> Cadastrar Loja
+        </button>
+        <button onclick="abrirModal('modalAnunciarFreela')" class="bg-brand-600 hover:bg-brand-700 text-white font-bold px-4 py-2.5 rounded-xl shadow-lg transition text-xs sm:text-sm flex items-center justify-center gap-2 w-full sm:w-auto">
+          <i class="fa-solid fa-user-plus"></i> Anunciar Freela
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== FILTRO COMPACTO DE GRANDES GRUPOS MG ==================== -->
+  <section class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 pt-3 sm:pt-4 w-full">
+    <div class="bg-white/90 backdrop-blur-md rounded-2xl p-2 sm:p-2.5 border border-slate-200/80 shadow-sm space-y-2 w-full">
+      
+      <div class="flex items-center justify-between gap-1.5 flex-wrap sm:flex-nowrap w-full">
+        <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar w-full sm:w-auto pb-0.5">
+          <span class="text-[10px] sm:text-[11px] font-extrabold uppercase text-slate-400 tracking-wider shrink-0 flex items-center gap-1">
+            <i class="fa-solid fa-map-pin text-brand-600"></i> Grupos MG:
+          </span>
+
+          <button onclick="filtrarGrupo('todos')" id="btnGrupo-todos" class="btn-grupo font-black text-[11px] px-2.5 py-1 rounded-xl bg-slate-900 text-white shadow-sm transition-all duration-150 cursor-pointer shrink-0">
+            Todos
+          </button>
+
+          <button onclick="filtrarGrupo('Supernosso')" id="btnGrupo-Supernosso" class="btn-grupo font-bold text-[11px] px-2.5 py-1 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100 transition-all duration-150 cursor-pointer shrink-0 flex items-center gap-1">
+            <span class="w-2 h-2 rounded-full bg-emerald-600"></span> Grupo Supernosso
+          </button>
+
+          <button onclick="filtrarGrupo('Carrefour')" id="btnGrupo-Carrefour" class="btn-grupo font-bold text-[11px] px-2.5 py-1 rounded-xl bg-blue-50 text-blue-800 border border-blue-200 hover:bg-blue-100 transition-all duration-150 cursor-pointer shrink-0 flex items-center gap-1">
+            <span class="w-2 h-2 rounded-full bg-blue-600"></span> Grupo Carrefour
+          </button>
+
+          <button onclick="filtrarGrupo('Assai')" id="btnGrupo-Assai" class="btn-grupo font-bold text-[11px] px-2.5 py-1 rounded-xl bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100 transition-all duration-150 cursor-pointer shrink-0 flex items-center gap-1">
+            <span class="w-2 h-2 rounded-full bg-amber-500"></span> Assaí MG
+          </button>
+
+          <button onclick="filtrarGrupo('MartMinas')" id="btnGrupo-MartMinas" class="btn-grupo font-bold text-[11px] px-2.5 py-1 rounded-xl bg-orange-50 text-orange-800 border border-orange-200 hover:bg-orange-100 transition-all duration-150 cursor-pointer shrink-0 flex items-center gap-1">
+            <span class="w-2 h-2 rounded-full bg-orange-600"></span> Mart Minas MG
+          </button>
+        </div>
+
+        <!-- Badge de Contador de Resultados -->
+        <div class="bg-slate-100 text-slate-600 font-bold px-2 py-0.5 rounded-full text-[10px] sm:text-[11px] border border-slate-200/70 flex items-center gap-1 shrink-0 ml-auto sm:ml-0">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
+          <span id="contadorResultados">Todas as opções</span>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ==================== CONTEÚDO PRINCIPAL ==================== -->
+  <main id="plataformas" class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-8 sm:space-y-12 w-full">
+
+    <!-- SEÇÃO 1: LOJAS ANTHOR -->
+    <section id="sec-Anthor" class="sec-plataforma space-y-3 sm:space-y-4">
+      <div class="flex flex-col xs:flex-row items-start xs:items-center justify-between border-b border-purple-200 pb-2.5 gap-2">
+        <div class="flex items-center gap-2">
+          <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-purple-600 text-white flex items-center justify-center font-extrabold text-xs shadow-sm shrink-0">
+            AN
+          </div>
+          <div>
+            <h2 class="text-base sm:text-xl font-black text-slate-900 leading-tight">
+              Lojas atendidas pela Anthor
+            </h2>
+            <p class="text-[11px] sm:text-xs text-slate-500">Supermercados e atacados com demandas ativas via app Anthor</p>
+          </div>
+        </div>
+        <span class="bg-purple-100 text-purple-800 text-[10px] sm:text-xs font-bold px-2.5 py-0.5 sm:py-1 rounded-full border border-purple-200 shrink-0 self-start xs:self-auto">Plataforma Anthor</span>
+      </div>
+
+      <div id="grid-Anthor" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-5"></div>
+    </section>
+
+    <!-- SEÇÃO 2: LOJAS HELLPI -->
+    <section id="sec-Hellpi" class="sec-plataforma space-y-3 sm:space-y-4">
+      <div class="flex flex-col xs:flex-row items-start xs:items-center justify-between border-b border-orange-200 pb-2.5 gap-2">
+        <div class="flex items-center gap-2">
+          <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-orange-500 text-white flex items-center justify-center font-extrabold text-xs shadow-sm shrink-0">
+            HP
+          </div>
+          <div>
+            <h2 class="text-base sm:text-xl font-black text-slate-900 leading-tight">
+              Lojas atendidas pela Hellpi
+            </h2>
+            <p class="text-[11px] sm:text-xs text-slate-500">Estabelecimentos parceiros para repositores e promotores Hellpi</p>
+          </div>
+        </div>
+        <span class="bg-orange-100 text-orange-800 text-[10px] sm:text-xs font-bold px-2.5 py-0.5 sm:py-1 rounded-full border border-orange-200 shrink-0 self-start xs:self-auto">Plataforma Hellpi</span>
+      </div>
+
+      <div id="grid-Hellpi" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-5"></div>
+    </section>
+
+    <!-- SEÇÃO 3: LOJAS ZUBALE -->
+    <section id="sec-Zubale" class="sec-plataforma space-y-3 sm:space-y-4">
+      <div class="flex flex-col xs:flex-row items-start xs:items-center justify-between border-b border-teal-200 pb-2.5 gap-2">
+        <div class="flex items-center gap-2">
+          <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-teal-600 text-white flex items-center justify-center font-extrabold text-xs shadow-sm shrink-0">
+            ZB
+          </div>
+          <div>
+            <h2 class="text-base sm:text-xl font-black text-slate-900 leading-tight">
+              Lojas atendidas pela Zubale
+            </h2>
+            <p class="text-[11px] sm:text-xs text-slate-500">Unidades de varejo e atacado cadastradas na rede Zubale</p>
+          </div>
+        </div>
+        <span class="bg-teal-100 text-teal-800 text-[10px] sm:text-xs font-bold px-2.5 py-0.5 sm:py-1 rounded-full border border-teal-200 shrink-0 self-start xs:self-auto">Plataforma Zubale</span>
+      </div>
+
+      <div id="grid-Zubale" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-5"></div>
+    </section>
+
+    <!-- SEÇÃO 4: OUTRAS LOJAS -->
+    <section id="sec-Outras" class="sec-plataforma space-y-3 sm:space-y-4">
+      <div class="flex flex-col xs:flex-row items-start xs:items-center justify-between border-b border-slate-200 pb-2.5 gap-2">
+        <div class="flex items-center gap-2">
+          <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-slate-700 text-white flex items-center justify-center font-extrabold text-xs shadow-sm shrink-0">
+            <i class="fa-solid fa-shop"></i>
+          </div>
+          <div>
+            <h2 class="text-base sm:text-xl font-black text-slate-900 leading-tight">
+              Outras Lojas (Independentes / Locais)
+            </h2>
+            <p class="text-[11px] sm:text-xs text-slate-500">Comércios de bairro e mercados de contratação direta</p>
+          </div>
+        </div>
+        <span class="bg-slate-100 text-slate-700 text-[10px] sm:text-xs font-bold px-2.5 py-0.5 sm:py-1 rounded-full border border-slate-200 shrink-0 self-start xs:self-auto">Loja Local</span>
+      </div>
+
+      <div id="grid-Outras" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-5"></div>
+    </section>
+
+    <!-- SEÇÃO 5: ANÚNCIOS DE FREELANCERS -->
+    <section id="freelancers" class="space-y-3 sm:space-y-4 pt-2 border-t border-slate-200">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 pb-2.5">
+        <div>
+          <h2 class="text-base sm:text-xl font-black text-slate-900 flex items-center gap-2">
+            <i class="fa-solid fa-user-gear text-emerald-600"></i> Anúncios de Freelancers &amp; Repositores
+          </h2>
+          <p class="text-[11px] sm:text-xs text-slate-500">Profissionais autônomos disponíveis para diárias e contratação direta</p>
+        </div>
+        <button onclick="abrirModal('modalAnunciarFreela')" class="text-xs font-bold text-brand-600 hover:text-brand-700 flex items-center gap-1 self-start sm:self-auto">
+          <i class="fa-solid fa-plus-circle"></i> Publicar Meu Anúncio
+        </button>
+      </div>
+
+      <div id="grid-Freelancers" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-5"></div>
+    </section>
+
+    <!-- SEÇÃO 6: ENQUETES DA COMUNIDADE -->
+    <section id="enquetes" class="space-y-3 sm:space-y-4 pt-4 border-t border-slate-200">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 pb-2.5">
+        <div>
+          <h2 class="text-base sm:text-xl font-black text-slate-900 flex items-center gap-2">
+            <i class="fa-solid fa-square-poll-vertical text-purple-600"></i> Enquetes &amp; Pesquisas da Comunidade
+          </h2>
+          <p class="text-[11px] sm:text-xs text-slate-500">Vote e confira a opinião dos repositores e freelancers em tempo real</p>
+        </div>
+        <button id="btnCriarEnqueteSection" onclick="abrirModalCriarEnquete()" class="hidden bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold px-3 py-1.5 rounded-xl shadow transition flex items-center gap-1.5 self-start sm:self-auto">
+          <i class="fa-solid fa-plus"></i> Criar Nova Enquete
+        </button>
+      </div>
+
+      <div id="grid-Enquetes" class="grid grid-cols-1 md:grid-cols-2 gap-3.5 sm:gap-5"></div>
+    </section>
+
+  </main>
+
+  <!-- ==================== BANNER SIMULADOR PWA ==================== -->
+  <div id="pwaBanner" class="fixed bottom-0 left-0 right-0 z-50 bg-slate-900/95 backdrop-blur-md text-white p-3 sm:p-4 shadow-2xl border-t border-slate-800 transition-all duration-300">
+    <div class="max-w-7xl mx-auto flex items-center justify-between gap-2">
+      
+      <div class="flex items-center gap-2.5 min-w-0">
+        <div class="w-9 h-9 sm:w-11 sm:h-11 rounded-xl bg-gradient-to-tr from-brand-600 to-emerald-500 text-white flex items-center justify-center font-bold text-base sm:text-lg shrink-0 shadow-md">
+          <i class="fa-solid fa-mobile-screen-button"></i>
+        </div>
+        <div class="min-w-0">
+          <h4 class="text-xs sm:text-sm font-black leading-tight truncate">Instalar Guia &amp; Freela</h4>
+          <p class="text-[10px] sm:text-xs text-slate-300 truncate">Acesse lojas e profissionais offline em MG</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-1.5 shrink-0">
+        <button onclick="simularInstalacaoPWA()" class="bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs px-3 py-2 rounded-xl transition shadow-md">
+          Instalar
+        </button>
+        <button onclick="fecharPWABanner()" class="text-slate-400 hover:text-white p-1">
+          <i class="fa-solid fa-xmark text-base"></i>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ==================== MODAL DE AVALIAÇÃO DE LOJA ==================== -->
+  <div id="modalAvaliacao" class="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm hidden items-end sm:items-center justify-center p-2 sm:p-4">
+    <div class="bg-white rounded-t-3xl sm:rounded-3xl max-w-md w-full p-5 sm:p-6 shadow-2xl space-y-3.5 animate-in fade-in zoom-in duration-200 max-h-[92vh] overflow-y-auto no-scrollbar">
+      
+      <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
+        <div>
+          <h3 class="text-base sm:text-lg font-extrabold text-slate-900">Avaliar Loja</h3>
+          <p id="nomeLojaModal" class="text-xs text-brand-600 font-bold truncate max-w-[240px]"></p>
+        </div>
+        <button onclick="fecharModal('modalAvaliacao')" class="text-slate-400 hover:text-slate-600 text-base p-1">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <!-- SEÇÃO DE IDENTIFICAÇÃO DO AVALIADOR -->
+      <div class="bg-blue-50/80 p-3 rounded-2xl border border-blue-100 space-y-2">
+        <div class="flex items-center justify-between gap-1">
+          <span class="text-xs font-bold text-slate-800 flex items-center gap-1">
+            <i class="fa-brands fa-google text-blue-600"></i> Identificação *
+          </span>
+          <span id="userGoogleStatusBadge" class="text-[9px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded">Logado com Google</span>
+        </div>
+
+        <div class="space-y-1 text-xs">
+          <label class="flex items-center gap-2 cursor-pointer font-medium text-slate-700 hover:text-slate-900">
+            <input type="radio" name="opcaoIdentidade" value="google" checked onchange="toggleInputNomeFicticio()" class="text-brand-600 focus:ring-brand-500">
+            <span class="truncate">Nome Google (<strong id="labelNomeGoogleUser">Usuário</strong>)</span>
+          </label>
+
+          <label class="flex items-center gap-2 cursor-pointer font-medium text-slate-700 hover:text-slate-900">
+            <input type="radio" name="opcaoIdentidade" value="ficticio" onchange="toggleInputNomeFicticio()" class="text-brand-600 focus:ring-brand-500">
+            <span>Nome Fictício / Apelido</span>
+          </label>
+
+          <div id="containerNomeFicticio" class="hidden pl-6 pt-1">
+            <input type="text" id="inputNomeFicticio" placeholder="Ex: Repositor Experiente / Agente007" class="w-full p-2 text-xs bg-white rounded-xl border border-slate-300 focus:outline-none focus:border-brand-500">
+          </div>
+
+          <label class="flex items-center gap-2 cursor-pointer font-medium text-slate-700 hover:text-slate-900">
+            <input type="radio" name="opcaoIdentidade" value="anonimo" onchange="toggleInputNomeFicticio()" class="text-brand-600 focus:ring-brand-500">
+            <span>Publicar como <strong>Anônimo</strong></span>
+          </label>
+        </div>
+      </div>
+
+      <!-- 1. Gestão da Loja -->
+      <div class="space-y-1 bg-slate-50 p-2.5 rounded-2xl border border-slate-100">
+        <div class="flex items-center justify-between">
+          <label class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+            <i class="fa-solid fa-user-tie text-brand-600"></i> Gestão da loja *
+          </label>
+          <span id="labelNota" class="text-[11px] font-bold text-amber-600"></span>
+        </div>
+        <div class="flex items-center justify-center gap-2 text-2xl py-1" id="starsContainer">
+          <button type="button" onclick="definirNota(1)" class="star-btn text-slate-300"><i class="fa-solid fa-star"></i></button>
+          <button type="button" onclick="definirNota(2)" class="star-btn text-slate-300"><i class="fa-solid fa-star"></i></button>
+          <button type="button" onclick="definirNota(3)" class="star-btn text-slate-300"><i class="fa-solid fa-star"></i></button>
+          <button type="button" onclick="definirNota(4)" class="star-btn text-slate-300"><i class="fa-solid fa-star"></i></button>
+          <button type="button" onclick="definirNota(5)" class="star-btn text-slate-300"><i class="fa-solid fa-star"></i></button>
+        </div>
+      </div>
+
+      <!-- 2. Oferece Refeição -->
+      <div class="flex items-center justify-between p-2.5 bg-slate-50 rounded-2xl border border-slate-100">
+        <span class="text-xs font-bold text-slate-800 flex items-center gap-1">
+          <i class="fa-solid fa-utensils text-emerald-600"></i> Oferece refeição? *
+        </span>
+        <div class="flex items-center gap-1 bg-slate-200/70 p-0.5 rounded-xl text-xs font-bold shrink-0">
+          <button type="button" id="btnRefeicaoSim" onclick="selecionarOpcao('refeicao', 'Sim')" class="px-2.5 py-1 rounded-lg transition text-slate-600 hover:text-slate-900">Sim</button>
+          <button type="button" id="btnRefeicaoNao" onclick="selecionarOpcao('refeicao', 'Não')" class="px-2.5 py-1 rounded-lg transition text-slate-600 hover:text-slate-900">Não</button>
+        </div>
+      </div>
+
+      <!-- 3. Oferece Café -->
+      <div class="flex items-center justify-between p-2.5 bg-slate-50 rounded-2xl border border-slate-100">
+        <span class="text-xs font-bold text-slate-800 flex items-center gap-1">
+          <i class="fa-solid fa-mug-hot text-amber-700"></i> Oferece café? *
+        </span>
+        <div class="flex items-center gap-1 bg-slate-200/70 p-0.5 rounded-xl text-xs font-bold shrink-0">
+          <button type="button" id="btnCafeSim" onclick="selecionarOpcao('cafe', 'Sim')" class="px-2.5 py-1 rounded-lg transition text-slate-600 hover:text-slate-900">Sim</button>
+          <button type="button" id="btnCafeNao" onclick="selecionarOpcao('cafe', 'Não')" class="px-2.5 py-1 rounded-lg transition text-slate-600 hover:text-slate-900">Não</button>
+        </div>
+      </div>
+
+      <!-- 4. Tem Micro-ondas -->
+      <div class="flex items-center justify-between p-2.5 bg-slate-50 rounded-2xl border border-slate-100">
+        <span class="text-xs font-bold text-slate-800 flex items-center gap-1">
+          <i class="fa-solid fa-fire-burner text-orange-600"></i> Tem micro-ondas? *
+        </span>
+        <div class="flex items-center gap-1 bg-slate-200/70 p-0.5 rounded-xl text-xs font-bold shrink-0">
+          <button type="button" id="btnMicroondasSim" onclick="selecionarOpcao('microondas', 'Sim')" class="px-2.5 py-1 rounded-lg transition text-slate-600 hover:text-slate-900">Sim</button>
+          <button type="button" id="btnMicroondasNao" onclick="selecionarOpcao('microondas', 'Não')" class="px-2.5 py-1 rounded-lg transition text-slate-600 hover:text-slate-900">Não</button>
+        </div>
+      </div>
+
+      <!-- 5. Pode Utilizar o Refeitório -->
+      <div class="flex items-center justify-between p-2.5 bg-slate-50 rounded-2xl border border-slate-100">
+        <span class="text-xs font-bold text-slate-800 flex items-center gap-1">
+          <i class="fa-solid fa-chair text-purple-600"></i> Usa refeitório? *
+        </span>
+        <div class="flex items-center gap-1 bg-slate-200/70 p-0.5 rounded-xl text-xs font-bold shrink-0">
+          <button type="button" id="btnRefeitorioSim" onclick="selecionarOpcao('refeitorio', 'Sim')" class="px-2.5 py-1 rounded-lg transition text-slate-600 hover:text-slate-900">Sim</button>
+          <button type="button" id="btnRefeitorioNao" onclick="selecionarOpcao('refeitorio', 'Não')" class="px-2.5 py-1 rounded-lg transition text-slate-600 hover:text-slate-900">Não</button>
+        </div>
+      </div>
+
+      <!-- 6. Voltaria a Atuar Novamente -->
+      <div class="flex items-center justify-between p-2.5 bg-slate-50 rounded-2xl border border-slate-100">
+        <span class="text-xs font-bold text-slate-800 flex items-center gap-1">
+          <i class="fa-solid fa-rotate-left text-brand-600"></i> Voltaria a atuar? *
+        </span>
+        <div class="flex items-center gap-1 bg-slate-200/70 p-0.5 rounded-xl text-xs font-bold shrink-0">
+          <button type="button" id="btnVoltariaSim" onclick="selecionarOpcao('voltaria', 'Sim')" class="px-2.5 py-1 rounded-lg transition text-slate-600 hover:text-slate-900">Sim</button>
+          <button type="button" id="btnVoltariaNao" onclick="selecionarOpcao('voltaria', 'Não')" class="px-2.5 py-1 rounded-lg transition text-slate-600 hover:text-slate-900">Não</button>
+        </div>
+      </div>
+
+      <!-- Campo de Comentário Opcional -->
+      <div>
+        <label class="block text-xs font-bold text-slate-700 mb-1">Comentários ou Dicas Adicionais:</label>
+        <textarea id="comentarioAvaliacao" rows="2" placeholder="Ex: Recepção rápida no depósito, gerência solícita..." class="w-full p-2.5 text-xs bg-slate-50 rounded-xl border border-slate-200 focus:outline-none focus:border-brand-500"></textarea>
+      </div>
+
+      <div class="flex items-center gap-2 pt-1">
+        <button onclick="fecharModal('modalAvaliacao')" class="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition">
+          Cancelar
+        </button>
+        <button onclick="enviarAvaliacao()" class="flex-1 py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs rounded-xl shadow transition">
+          Salvar Avaliação
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ==================== MODAL CADASTRAR NOVA LOJA ==================== -->
+  <div id="modalCadastrarLoja" class="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm hidden items-end sm:items-center justify-center p-2 sm:p-4">
+    <div class="bg-white rounded-t-3xl sm:rounded-3xl max-w-md w-full p-5 sm:p-6 shadow-2xl space-y-3.5 max-h-[92vh] overflow-y-auto no-scrollbar">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
+        <h3 class="text-base sm:text-lg font-extrabold text-slate-900 flex items-center gap-2">
+          <i class="fa-solid fa-store text-emerald-500"></i> Cadastrar Nova Loja
+        </h3>
+        <button onclick="fecharModal('modalCadastrarLoja')" class="text-slate-400 hover:text-slate-600 p-1">
+          <i class="fa-solid fa-xmark text-base"></i>
+        </button>
+      </div>
+
+      <button type="button" onclick="gerarLojaAleatoria()" class="w-full bg-purple-50 hover:bg-purple-100 text-purple-700 font-bold text-xs py-2 px-3 rounded-xl border border-purple-200 flex items-center justify-center gap-1.5 transition active:scale-95">
+        <i class="fa-solid fa-dice text-purple-600 text-sm"></i> 🎲 Gerar Cadastro Aleatório MG
+      </button>
+
+      <form onsubmit="salvarNovaLoja(event)" class="space-y-3">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Nome do Estabelecimento *</label>
+          <input type="text" id="cadLojaNome" required placeholder="Ex: Supernosso / Mart Minas / Carrefour" class="w-full p-2.5 text-xs bg-slate-50 rounded-xl border border-slate-200 focus:outline-none focus:border-brand-500">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Grupo Empresarial / Rede *</label>
+          <select id="cadLojaGrupo" required class="w-full p-2.5 text-xs bg-slate-50 rounded-xl border border-slate-200 focus:outline-none focus:border-brand-500 font-bold">
+            <option value="Supernosso">Grupo Supernosso (Supernosso / Apoio Mineiro)</option>
+            <option value="Carrefour">Grupo Carrefour (Carrefour / Atacadão)</option>
+            <option value="Assai">Assaí MG</option>
+            <option value="MartMinas">Mart Minas MG</option>
+            <option value="Outros">Outro Grupo / Loja Local</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Plataforma Atendida *</label>
+          <select id="cadLojaPlataforma" required class="w-full p-2.5 text-xs bg-slate-50 rounded-xl border border-slate-200 focus:outline-none focus:border-brand-500 font-bold">
+            <option value="Anthor">Anthor</option>
+            <option value="Hellpi">Hellpi</option>
+            <option value="Zubale">Zubale</option>
+            <option value="Outras">Outras (Independente / Local)</option>
+          </select>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Tipo de Loja *</label>
+            <select id="cadLojaTipo" onchange="verificarTipoOutro()" required class="w-full p-2.5 text-xs bg-slate-50 rounded-xl border border-slate-200 focus:outline-none focus:border-brand-500">
+              <option value="Atacado">Atacado</option>
+              <option value="Supermercado">Supermercado</option>
+              <option value="Atacado e varejo">Atacado e varejo</option>
+              <option value="Hipermercado">Hipermercado</option>
+              <option value="Outros">Outro (Farmácia, Pet Shop, etc.)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Bairro / Cidade *</label>
+            <input type="text" id="cadLojaBairro" required placeholder="Ex: Savassi, BH / Contagem" class="w-full p-2.5 text-xs bg-slate-50 rounded-xl border border-slate-200 focus:outline-none focus:border-brand-500">
+          </div>
+        </div>
+
+        <div id="containerTipoOutro" class="hidden">
+          <label class="block text-xs font-bold text-slate-700 mb-1">Especifique o Tipo da Loja *</label>
+          <input type="text" id="cadLojaTipoEspecifico" placeholder="Ex: Farmácia, Pet Shop, Eletrônicos..." class="w-full p-2.5 text-xs bg-slate-50 rounded-xl border border-slate-200 focus:outline-none focus:border-brand-500">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Link de Imagem (Opcional)</label>
+          <input type="url" id="cadLojaImagem" placeholder="https://..." class="w-full p-2.5 text-xs bg-slate-50 rounded-xl border border-slate-200 focus:outline-none focus:border-brand-500">
+        </div>
+
+        <button type="submit" class="w-full py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs rounded-xl shadow transition mt-2">
+          Cadastrar e Publicar Loja
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL ANUNCIAR FREELANCER ==================== -->
+  <div id="modalAnunciarFreela" class="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm hidden items-end sm:items-center justify-center p-2 sm:p-4">
+    <div class="bg-white rounded-t-3xl sm:rounded-3xl max-w-md w-full p-5 sm:p-6 shadow-2xl space-y-3.5 max-h-[92vh] overflow-y-auto no-scrollbar">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
+        <h3 class="text-base sm:text-lg font-extrabold text-slate-900 flex items-center gap-2">
+          <i class="fa-solid fa-bullhorn text-brand-600"></i> Anunciar Serviço Freelance
+        </h3>
+        <button onclick="fecharModal('modalAnunciarFreela')" class="text-slate-400 hover:text-slate-600 p-1">
+          <i class="fa-solid fa-xmark text-base"></i>
+        </button>
+      </div>
+
+      <form onsubmit="salvarNovoFreela(event)" class="space-y-3">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Seu Nome Completo *</label>
+          <input type="text" id="cadFreelaNome" required placeholder="Ex: João Silva" class="w-full p-2.5 text-xs bg-slate-50 rounded-xl border border-slate-200 focus:outline-none focus:border-brand-500">
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Ocupação / Função *</label>
+            <input type="text" id="cadFreelaFuncao" required placeholder="Ex: Repositor, Promotor..." class="w-full p-2.5 text-xs bg-slate-50 rounded-xl border border-slate-200 focus:outline-none focus:border-brand-500">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">WhatsApp (com DDD) *</label>
+            <input type="tel" id="cadFreelaWhats" required placeholder="31999990000" class="w-full p-2.5 text-xs bg-slate-50 rounded-xl border border-slate-200 focus:outline-none focus:border-brand-500">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Disponibilidade de Horário</label>
+          <input type="text" id="cadFreelaDisp" placeholder="Ex: Diárias, Fins de Semana, Turno da Noite" class="w-full p-2.5 text-xs bg-slate-50 rounded-xl border border-slate-200 focus:outline-none focus:border-brand-500">
+        </div>
+
+        <button type="submit" class="w-full py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs rounded-xl shadow transition mt-2">
+          Publicar Meu Perfil
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL DE LOGIN COM GOOGLE ==================== -->
+  <div id="modalGoogleLogin" class="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm hidden items-end sm:items-center justify-center p-2 sm:p-4">
+    <div class="bg-white rounded-t-3xl sm:rounded-3xl max-w-sm w-full p-5 sm:p-6 shadow-2xl space-y-3.5 animate-in fade-in zoom-in duration-200">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
+        <div class="flex items-center gap-2">
+          <i class="fa-brands fa-google text-lg text-red-500"></i>
+          <h3 class="text-sm sm:text-base font-extrabold text-slate-900">Entrar com a Conta Google</h3>
+        </div>
+        <button onclick="fecharModal('modalGoogleLogin')" class="text-slate-400 hover:text-slate-600 p-1">
+          <i class="fa-solid fa-xmark text-base"></i>
+        </button>
+      </div>
+
+      <p class="text-xs text-slate-600 leading-relaxed">
+        Para avaliar estabelecimentos e garantir a autenticidade das opiniões de freelancers, é necessário realizar o login.
+      </p>
+
+      <!-- Campo para Digitar Nome Personalizado para Testes -->
+      <div class="bg-slate-50 p-3 rounded-2xl border border-slate-200 space-y-2">
+        <label class="block text-xs font-bold text-slate-700">Digite seu Nome para Testar:</label>
+        <div class="flex items-center gap-2">
+          <input type="text" id="inputNomeCustomGoogle" placeholder="Ex: Carlos Santos" class="w-full p-2 text-xs bg-white rounded-xl border border-slate-300 focus:outline-none focus:border-brand-500 font-semibold">
+          <button onclick="simularLoginGoogleCustom()" class="bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs px-3 py-2 rounded-xl shrink-0 shadow transition">
+            Entrar
+          </button>
+        </div>
+      </div>
+
+      <div class="space-y-2 pt-1">
+        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Ou escolha um perfil de teste:</span>
+
+        <button onclick="simularLoginGoogle('Lucas Mendes', 'lucas.mendes@gmail.com', 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=150')" class="w-full p-2.5 rounded-2xl border border-slate-200 hover:border-brand-500 hover:bg-blue-50/50 flex items-center justify-between text-left transition group">
+          <div class="flex items-center gap-2.5">
+            <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=150" alt="Lucas" class="w-8 h-8 rounded-full object-cover border border-slate-200 shrink-0">
+            <div>
+              <h4 class="text-xs font-bold text-slate-900 group-hover:text-brand-600">Lucas Mendes</h4>
+              <p class="text-[10px] text-slate-500 truncate max-w-[170px]">lucas.mendes@gmail.com</p>
+            </div>
+          </div>
+          <i class="fa-solid fa-chevron-right text-slate-300 text-xs group-hover:text-brand-600"></i>
+        </button>
+
+        <button onclick="simularLoginGoogle('Mariana Alves', 'mariana.alves@gmail.com', 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&q=80&w=150')" class="w-full p-2.5 rounded-2xl border border-slate-200 hover:border-brand-500 hover:bg-blue-50/50 flex items-center justify-between text-left transition group">
+          <div class="flex items-center gap-2.5">
+            <img src="https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&q=80&w=150" alt="Mariana" class="w-8 h-8 rounded-full object-cover border border-slate-200 shrink-0">
+            <div>
+              <h4 class="text-xs font-bold text-slate-900 group-hover:text-brand-600">Mariana Alves</h4>
+              <p class="text-[10px] text-slate-500 truncate max-w-[170px]">mariana.alves@gmail.com</p>
+            </div>
+          </div>
+          <i class="fa-solid fa-chevron-right text-slate-300 text-xs group-hover:text-brand-600"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL DE EDIÇÃO DE LOJA (ADMIN) ==================== -->
+  <div id="modalEditarLoja" class="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm hidden items-end sm:items-center justify-center p-2 sm:p-4">
+    <div class="bg-white rounded-t-3xl sm:rounded-3xl max-w-md w-full p-5 sm:p-6 shadow-2xl space-y-3.5 max-h-[92vh] overflow-y-auto no-scrollbar">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
+        <h3 class="text-base sm:text-lg font-extrabold text-slate-900 flex items-center gap-2">
+          <i class="fa-solid fa-pen-to-square text-amber-500"></i> Editar Loja (Modo Admin)
+        </h3>
+        <button onclick="fecharModal('modalEditarLoja')" class="text-slate-400 hover:text-slate-600 p-1">
+          <i class="fa-solid fa-xmark text-base"></i>
+        </button>
+      </div>
+
+      <form onsubmit="salvarEdicaoLoja(event)" class="space-y-3">
+        <input type="hidden" id="editLojaId">
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Nome do Estabelecimento *</label>
+          <input type="text" id="editLojaNome" required class="w-full p-2.5 text-xs bg-slate-50 rounded-xl border border-slate-200 focus:outline-none focus:border-brand-500">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Grupo Empresarial / Rede *</label>
+          <select id="editLojaGrupo" required class="w-full p-2.5 text-xs bg-slate-50 rounded-xl border border-slate-200 focus:outline-none focus:border-brand-500 font-bold">
+            <option value="Supernosso">Grupo Supernosso</option>
+            <option value="Carrefour">Grupo Carrefour</option>
+            <option value="Assai">Assaí MG</option>
+            <option value="MartMinas">Mart Minas MG</option>
+            <option value="Outros">Outro Grupo / Loja Local</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Plataforma *</label>
+          <select id="editLojaPlataforma" required class="w-full p-2.5 text-xs bg-slate-50 rounded-xl border border-slate-200 focus:outline-none focus:border-brand-500 font-bold">
+            <option value="Anthor">Anthor</option>
+            <option value="Hellpi">Hellpi</option>
+            <option value="Zubale">Zubale</option>
+            <option value="Outras">Outras (Independente / Local)</option>
+          </select>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Tipo de Loja *</label>
+            <input type="text" id="editLojaTipo" required placeholder="Ex: Atacado, Supermercado..." class="w-full p-2.5 text-xs bg-slate-50 rounded-xl border border-slate-200 focus:outline-none focus:border-brand-500">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Bairro / Endereço *</label>
+            <input type="text" id="editLojaBairro" required class="w-full p-2.5 text-xs bg-slate-50 rounded-xl border border-slate-200 focus:outline-none focus:border-brand-500">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Link de Imagem (Opcional)</label>
+          <input type="url" id="editLojaImagem" class="w-full p-2.5 text-xs bg-slate-50 rounded-xl border border-slate-200 focus:outline-none focus:border-brand-500">
+        </div>
+
+        <div class="flex items-center gap-2 pt-1">
+          <button type="button" onclick="fecharModal('modalEditarLoja')" class="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition">
+            Cancelar
+          </button>
+          <button type="submit" class="flex-1 py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs rounded-xl shadow transition">
+            Salvar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL DE TROCAR IMAGEM DA LOJA (ADMIN) ==================== -->
+  <div id="modalTrocarImagem" class="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm hidden items-end sm:items-center justify-center p-2 sm:p-4">
+    <div class="bg-white rounded-t-3xl sm:rounded-3xl max-w-md w-full p-5 sm:p-6 shadow-2xl space-y-3.5 max-h-[92vh] overflow-y-auto no-scrollbar">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
+        <h3 class="text-base sm:text-lg font-extrabold text-slate-900 flex items-center gap-2">
+          <i class="fa-solid fa-camera text-indigo-600"></i> Alterar Imagem da Loja
+        </h3>
+        <button onclick="fecharModal('modalTrocarImagem')" class="text-slate-400 hover:text-slate-600 p-1">
+          <i class="fa-solid fa-xmark text-base"></i>
+        </button>
+      </div>
+
+      <div class="space-y-3">
+        <input type="hidden" id="trocarImagemLojaId">
+        
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Pré-visualização</label>
+          <div class="relative h-32 w-full rounded-2xl overflow-hidden bg-slate-100 border border-slate-200">
+            <img id="previewTrocarImagem" src="" alt="Preview" class="w-full h-full object-cover">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">URL da Imagem *</label>
+          <input type="url" id="inputTrocarImagemUrl" oninput="atualizarPreviewTrocarImagem(this.value)" placeholder="https://..." class="w-full p-2.5 text-xs bg-slate-50 rounded-xl border border-slate-200 focus:outline-none focus:border-indigo-500 font-mono">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Presets Prontos:</label>
+          <div class="grid grid-cols-3 gap-2">
+            <button type="button" onclick="selecionarPresetImagem('https://images.unsplash.com/photo-1578916171728-46686eac8d58?auto=format&fit=crop&q=80&w=600')" class="p-1 rounded-xl border border-slate-200 hover:border-indigo-500 overflow-hidden text-center group transition">
+              <img src="https://images.unsplash.com/photo-1578916171728-46686eac8d58?auto=format&fit=crop&q=80&w=150" class="w-full h-10 object-cover rounded-lg group-hover:scale-105 transition">
+              <span class="text-[9px] font-bold text-slate-600 block mt-0.5">Mercado</span>
+            </button>
+            <button type="button" onclick="selecionarPresetImagem('https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&q=80&w=600')" class="p-1 rounded-xl border border-slate-200 hover:border-indigo-500 overflow-hidden text-center group transition">
+              <img src="https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&q=80&w=150" class="w-full h-10 object-cover rounded-lg group-hover:scale-105 transition">
+              <span class="text-[9px] font-bold text-slate-600 block mt-0.5">Atacado</span>
+            </button>
+            <button type="button" onclick="selecionarPresetImagem('https://images.unsplash.com/photo-1586015555751-63bb77f4322a?auto=format&fit=crop&q=80&w=600')" class="p-1 rounded-xl border border-slate-200 hover:border-indigo-500 overflow-hidden text-center group transition">
+              <img src="https://images.unsplash.com/photo-1586015555751-63bb77f4322a?auto=format&fit=crop&q=80&w=150" class="w-full h-10 object-cover rounded-lg group-hover:scale-105 transition">
+              <span class="text-[9px] font-bold text-slate-600 block mt-0.5">Farmácia</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2 pt-1">
+          <button type="button" onclick="fecharModal('modalTrocarImagem')" class="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition">
+            Cancelar
+          </button>
+          <button type="button" onclick="salvarTrocaImagemLoja()" class="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow transition">
+            Salvar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL DE VER COMENTÁRIOS E AVALIAÇÕES ==================== -->
+  <div id="modalVerComentarios" class="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm hidden items-end sm:items-center justify-center p-2 sm:p-4">
+    <div class="bg-white rounded-t-3xl sm:rounded-3xl max-w-lg w-full p-5 sm:p-6 shadow-2xl space-y-3.5 max-h-[92vh] overflow-y-auto no-scrollbar">
+      
+      <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
+        <div>
+          <div class="flex items-center gap-1.5">
+            <span id="platBadgeModalComentarios"></span>
+            <span id="tipoLojaModalComentarios" class="text-[10px] font-bold text-slate-400 uppercase"></span>
+          </div>
+          <h3 id="nomeLojaModalComentarios" class="text-base sm:text-lg font-extrabold text-slate-900 truncate max-w-[240px]"></h3>
+          <p id="bairroLojaModalComentarios" class="text-xs text-slate-500 flex items-center gap-1">
+            <i class="fa-solid fa-location-dot"></i> <span></span>
+          </p>
+        </div>
+        <button onclick="fecharModal('modalVerComentarios')" class="text-slate-400 hover:text-slate-600 text-base p-1">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <!-- Resumo Estatístico da Loja -->
+      <div id="resumoLojaModalComentarios" class="bg-slate-50 p-3 sm:p-4 rounded-2xl border border-slate-100 space-y-2"></div>
+
+      <!-- Lista de Avaliações e Depoimentos -->
+      <div class="space-y-2.5 pt-1">
+        <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center justify-between">
+          <span>Relatos e Comentários</span>
+          <button id="btnAvaliarDaModalComentarios" class="text-brand-600 hover:underline font-bold text-xs">
+            + Avaliar
+          </button>
+        </h4>
+
+        <div id="listaComentariosContainer" class="space-y-2.5 max-h-60 overflow-y-auto pr-1"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ==================== MODAL DE CRIAR ENQUETE (ADMIN) ==================== -->
+  <div id="modalCriarEnquete" class="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm hidden items-end sm:items-center justify-center p-2 sm:p-4">
+    <div class="bg-white rounded-t-3xl sm:rounded-3xl max-w-md w-full p-5 sm:p-6 shadow-2xl space-y-3.5 max-h-[92vh] overflow-y-auto no-scrollbar">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
+        <h3 class="text-base sm:text-lg font-extrabold text-slate-900 flex items-center gap-2">
+          <i class="fa-solid fa-square-poll-vertical text-purple-600"></i> Criar Nova Enquete
+        </h3>
+        <button onclick="fecharModal('modalCriarEnquete')" class="text-slate-400 hover:text-slate-600 p-1">
+          <i class="fa-solid fa-xmark text-base"></i>
+        </button>
+      </div>
+
+      <form onsubmit="salvarNovaEnquete(event)" class="space-y-3">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Pergunta / Título *</label>
+          <input type="text" id="cadEnquetePergunta" required placeholder="Ex: Qual grupo oferece melhor refeitório em MG?" class="w-full p-2.5 text-xs bg-slate-50 rounded-xl border border-slate-200 focus:outline-none focus:border-purple-500">
+        </div>
+
+        <div class="space-y-2">
+          <div class="flex items-center justify-between">
+            <label class="block text-xs font-bold text-slate-700">Opções de Voto * (Mín. 2)</label>
+            <button type="button" onclick="adicionarCampoOpcaoEnquete()" class="text-xs font-bold text-purple-600 hover:text-purple-800 flex items-center gap-1">
+              <i class="fa-solid fa-plus-circle"></i> Add Opção
+            </button>
+          </div>
+
+          <div id="containerOpcoesEnquete" class="space-y-2">
+            <div class="flex items-center gap-2">
+              <input type="text" class="input-opcao-enquete w-full p-2.5 text-xs bg-slate-50 rounded-xl border border-slate-200 focus:outline-none focus:border-purple-500" required placeholder="Opção 1 (Ex: Grupo Supernosso)">
+            </div>
+            <div class="flex items-center gap-2">
+              <input type="text" class="input-opcao-enquete w-full p-2.5 text-xs bg-slate-50 rounded-xl border border-slate-200 focus:outline-none focus:border-purple-500" required placeholder="Opção 2 (Ex: Grupo Carrefour)">
+            </div>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2 pt-1">
+          <button type="button" onclick="fecharModal('modalCriarEnquete')" class="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition">
+            Cancelar
+          </button>
+          <button type="submit" class="flex-1 py-2.5 bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs rounded-xl shadow transition flex items-center justify-center gap-1">
+            <i class="fa-solid fa-paper-plane"></i> Publicar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== LÓGICA JAVASCRIPT ==================== -->
+  <script>
+    // BASE DE DADOS INICIAL DE LOJAS EM MINAS GERAIS (INCLUINDO OS 4 GRANDES GRUPOS)
+    const lojas = [
+      {
+        id: 1,
+        nome: "Supernosso Funcionários",
+        grupo: "Supernosso",
+        placeId: "ChIJ7_MjFcKZpgAR_ZHsqS-19Lg",
+        plataforma: "Anthor",
+        tipo: "Supermercado",
+        bairro: "R. Gonçalves Dias, Funcionários - BH",
+        nota: "4.8",
+        avaliacoesCount: 142,
+        refeicaoSim: 120,
+        cafeSim: 135,
+        microondasSim: 130,
+        refeitorioSim: 132,
+        voltariaSim: 130,
+        imagem: "https://images.unsplash.com/photo-1578916171728-46686eac8d58?auto=format&fit=crop&q=80&w=600",
+        comentarios: [
+          {
+            autor: "Lucas Mendes",
+            nota: 5,
+            refeicao: "Sim",
+            cafe: "Sim",
+            microondas: "Sim",
+            refeitorio: "Sim",
+            voltaria: "Sim",
+            texto: "Excelente estrutura do Grupo Supernosso! Recepção rápida no depósito.",
+            data: "Há 2 dias"
+          }
+        ]
+      },
+      {
+        id: 2,
+        nome: "Apoio Mineiro Waldomiro Lobo",
+        grupo: "Supernosso",
+        placeId: "ChIJ7RRPc7qbpgAR7sOZ_FUL-0s",
+        plataforma: "Anthor",
+        tipo: "Atacado e varejo",
+        bairro: "Av. Waldomiro Lobo, Guarani - BH",
+        nota: "4.7",
+        avaliacoesCount: 118,
+        refeicaoSim: 95,
+        cafeSim: 110,
+        microondasSim: 105,
+        refeitorioSim: 102,
+        voltariaSim: 108,
+        imagem: "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&q=80&w=600",
+        comentarios: [
+          {
+            autor: "Roberto Silva",
+            nota: 5,
+            refeicao: "Sim",
+            cafe: "Sim",
+            microondas: "Sim",
+            refeitorio: "Sim",
+            voltaria: "Sim",
+            texto: "Unidade do Apoio Mineiro (Grupo Supernosso). Atendimento excelente para freelas.",
+            data: "Há 3 dias"
+          }
+        ]
+      },
+      {
+        id: 3,
+        nome: "Carrefour Hipermercado Carlos Luz",
+        grupo: "Carrefour",
+        placeId: "ChIJ1WEno6WRpgARObL9tNzTRTQ",
+        plataforma: "Anthor",
+        tipo: "Hipermercado",
+        bairro: "Av. Carlos Luz, Engenho Nogueira - BH",
+        nota: "4.9",
+        avaliacoesCount: 215,
+        refeicaoSim: 195,
+        cafeSim: 205,
+        microondasSim: 198,
+        refeitorioSim: 200,
+        voltariaSim: 202,
+        imagem: "https://images.unsplash.com/photo-1534723452862-4c874018d66d?auto=format&fit=crop&q=80&w=600",
+        comentarios: [
+          {
+            autor: "Mariana Alves",
+            nota: 5,
+            refeicao: "Sim",
+            cafe: "Sim",
+            microondas: "Sim",
+            refeitorio: "Sim",
+            voltaria: "Sim",
+            texto: "Hipermercado Carrefour excelente! Refeitório limpo e organizado.",
+            data: "Ontem"
+          }
+        ]
+      },
+      {
+        id: 4,
+        nome: "Atacadão Contagem",
+        grupo: "Carrefour",
+        placeId: "ChIJZTB-49G_pgARj9Tc82hEgYY",
+        plataforma: "Hellpi",
+        tipo: "Atacado",
+        bairro: "Rodovia Fernão Dias, Contagem - MG",
+        nota: "4.6",
+        avaliacoesCount: 160,
+        refeicaoSim: 130,
+        cafeSim: 145,
+        microondasSim: 140,
+        refeitorioSim: 138,
+        voltariaSim: 142,
+        imagem: "https://images.unsplash.com/photo-1610832958506-aa56368176cf?auto=format&fit=crop&q=80&w=600",
+        comentarios: []
+      },
+      {
+        id: 5,
+        nome: "Assaí Atacado e Varejo Contagem",
+        grupo: "Assai",
+        placeId: "ChIJ7ZxSsXeVpgARmpRhmcGcvMk",
+        plataforma: "Hellpi",
+        tipo: "Atacado e varejo",
+        bairro: "Av. João César de Oliveira, Contagem - MG",
+        nota: "4.8",
+        avaliacoesCount: 190,
+        refeicaoSim: 170,
+        cafeSim: 180,
+        microondasSim: 175,
+        refeitorioSim: 178,
+        voltariaSim: 182,
+        imagem: "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=600",
+        comentarios: [
+          {
+            autor: "Carlos Lima",
+            nota: 5,
+            refeicao: "Sim",
+            cafe: "Sim",
+            microondas: "Sim",
+            refeitorio: "Sim",
+            voltaria: "Sim",
+            texto: "Assaí MG com ótima recepção no depósito e agilidade para repositores.",
+            data: "Há 1 dia"
+          }
+        ]
+      },
+      {
+        id: 6,
+        nome: "Mart Minas - Atacado & Varejo Contagem",
+        grupo: "MartMinas",
+        placeId: "ChIJX0zCrS2_pgARdjYkDSCEuWc",
+        plataforma: "Zubale",
+        tipo: "Atacado e varejo",
+        bairro: "Av. Gen. David Sarnoff, Cidade Industrial - Contagem",
+        nota: "4.7",
+        avaliacoesCount: 175,
+        refeicaoSim: 150,
+        cafeSim: 165,
+        microondasSim: 160,
+        refeitorioSim: 158,
+        voltariaSim: 162,
+        imagem: "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&q=80&w=600",
+        comentarios: []
+      },
+      {
+        id: 7,
+        nome: "Drogaria Araújo & Farma",
+        grupo: "Outros",
+        placeId: "",
+        plataforma: "Anthor",
+        tipo: "Farmácia",
+        bairro: "Av. Afonso Pena, Centro - BH",
+        nota: "4.9",
+        avaliacoesCount: 53,
+        refeicaoSim: 10,
+        cafeSim: 48,
+        microondasSim: 20,
+        refeitorioSim: 15,
+        voltariaSim: 50,
+        imagem: "https://images.unsplash.com/photo-1586015555751-63bb77f4322a?auto=format&fit=crop&q=80&w=600",
+        comentarios: []
+      },
+      {
+        id: 8,
+        nome: "Petz Center & Clínica",
+        grupo: "Outros",
+        placeId: "",
+        plataforma: "Hellpi",
+        tipo: "Pet Shop",
+        bairro: "Bairro Anchieta - BH",
+        nota: "4.5",
+        avaliacoesCount: 31,
+        refeicaoSim: 5,
+        cafeSim: 28,
+        microondasSim: 10,
+        refeitorioSim: 12,
+        voltariaSim: 29,
+        imagem: "https://images.unsplash.com/photo-1583337130417-3346a1be7dee?auto=format&fit=crop&q=80&w=600",
+        comentarios: []
+      }
+    ];
+
+    const freelancers = [
+      {
+        id: 1,
+        nome: "Ana Souza",
+        funcao: "Repositora & Organizadora",
+        nota: "4.9",
+        whats: "5531999990001",
+        disp: "Disponível para diárias em BH e Contagem",
+        foto: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=200"
+      },
+      {
+        id: 2,
+        nome: "Carlos Lima",
+        funcao: "Promotor de Vendas & Eletricista",
+        nota: "4.8",
+        whats: "5531999990002",
+        disp: "Disponibilidade imediata MG",
+        foto: "https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&q=80&w=200"
+      },
+      {
+        id: 3,
+        nome: "Mariana Alves",
+        funcao: "Operadora de Caixa & Repositora",
+        nota: "5.0",
+        whats: "5531999990003",
+        disp: "Fins de semana e turnos",
+        foto: "https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&q=80&w=200"
+      },
+      {
+        id: 4,
+        nome: "Roberto Silva",
+        funcao: "Conferente de Estoque",
+        nota: "4.7",
+        whats: "5531999990004",
+        disp: "Turno Noturno / Madrugada",
+        foto: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=200"
+      }
+    ];
+
+    const enquetes = [
+      {
+        id: 1,
+        pergunta: "Qual grande grupo empresarial em MG oferece o melhor suporte a repositores?",
+        criadoPor: "Administrador",
+        data: "Há 1 dia",
+        ativa: true,
+        totalVotos: 214,
+        opcoes: [
+          { id: 1, texto: "Grupo Supernosso (Supernosso / Apoio Mineiro)", votos: 98 },
+          { id: 2, texto: "Grupo Carrefour (Carrefour / Atacadão)", votos: 62 },
+          { id: 3, texto: "Assaí MG", votos: 34 },
+          { id: 4, texto: "Mart Minas MG", votos: 20 }
+        ]
+      }
+    ];
+
+    let votosUsuario = JSON.parse(localStorage.getItem('votosUsuarioGuiaFreela') || '{}');
+
+    // ESTADO GLOBAL
+    let modoAdmin = false;
+    let usuarioGoogleLogado = null;
+
+    let grupoAtivo = 'todos';
+    let plataformaAtiva = 'todas';
+    let termoBusca = '';
+    let notaSelecionadaModal = 0;
+    let lojaModalNome = '';
+    let evalRefeicao = null;
+    let evalCafe = null;
+    let evalMicroondas = null;
+    let evalRefeitorio = null;
+    let evalVoltaria = null;
+
+    // INICIALIZAÇÃO DA PÁGINA
+    window.addEventListener('DOMContentLoaded', () => {
+      renderizarTodasLojas();
+      renderizarFreelancers();
+      renderizarEnquetes();
+    });
+
+    // SISTEMA DE MODERADOR E AUTENTICAÇÃO
+    function toggleModoAdmin() {
+      modoAdmin = !modoAdmin;
+      
+      const lblDesktop = document.getElementById('labelModoAdmin');
+      const lblMobile = document.getElementById('labelModoAdminMobile');
+      const btnToggle = document.getElementById('btnToggleAdmin');
+
+      const btnsAdmin = [
+        document.getElementById('btnCadastrarLojaNav'),
+        document.getElementById('btnCadastrarLojaMobile'),
+        document.getElementById('btnCadastrarLojaHero'),
+        document.getElementById('btnCriarEnqueteNav'),
+        document.getElementById('btnCriarEnqueteMobile'),
+        document.getElementById('btnCriarEnqueteSection')
+      ];
+
+      if (modoAdmin) {
+        if (lblDesktop) lblDesktop.textContent = 'Admin ON 👑';
+        if (lblMobile) lblMobile.textContent = 'Modo Admin: ATIVADO';
+        if (btnToggle) btnToggle.className = 'bg-amber-500 text-slate-950 font-black text-xs px-2.5 py-1.5 rounded-full shadow transition flex items-center gap-1';
+        
+        btnsAdmin.forEach(btn => btn && btn.classList.remove('hidden'));
+        toast('👑 Modo Administrador Ativado!');
+      } else {
+        if (lblDesktop) lblDesktop.textContent = 'Modo Admin: OFF';
+        if (lblMobile) lblMobile.textContent = 'Alternar Modo Admin';
+        if (btnToggle) btnToggle.className = 'bg-slate-800 hover:bg-slate-900 text-slate-200 text-xs font-bold px-2.5 py-1.5 rounded-full border border-slate-700 transition flex items-center gap-1';
+        
+        btnsAdmin.forEach(btn => btn && btn.classList.add('hidden'));
+        toast('Modo Administrador Desativado.');
+      }
+      renderizarTodasLojas();
+      renderizarEnquetes();
+    }
+
+    function simularLoginGoogleCustom() {
+      const inputCustom = document.getElementById('inputNomeCustomGoogle');
+      const nome = (inputCustom && inputCustom.value.trim()) ? inputCustom.value.trim() : 'Carlos Santos';
+      simularLoginGoogle(nome, `${nome.toLowerCase().replace(/\s+/g, '.')}@gmail.com`, 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=150');
+    }
+
+    function simularLoginGoogle(nome, email, foto) {
+      usuarioGoogleLogado = { nome, email, foto };
+      
+      const container = document.getElementById('containerUserAuth');
+      if (container) {
+        container.innerHTML = `
+          <div class="flex items-center gap-1.5 bg-blue-50 border border-blue-200 px-2.5 py-1.5 rounded-full shadow-sm shrink-0">
+            <img src="${foto}" alt="${nome}" class="w-5 h-5 rounded-full object-cover shrink-0">
+            <span class="text-xs font-black text-blue-900 max-w-[130px] sm:max-w-[200px] truncate" title="${nome}">${nome}</span>
+            <button onclick="fazerLogoutGoogle()" title="Sair da Conta" class="text-slate-400 hover:text-rose-600 ml-0.5 shrink-0">
+              <i class="fa-solid fa-right-from-bracket text-xs"></i>
+            </button>
+          </div>
+        `;
+      }
+
+      fecharModal('modalGoogleLogin');
+      toast(`Bem-vindo, ${nome}! Login efetuado.`);
+    }
+
+    function fazerLogoutGoogle() {
+      usuarioGoogleLogado = null;
+      const container = document.getElementById('containerUserAuth');
+      if (container) {
+        container.innerHTML = `
+          <button onclick="abrirModal('modalGoogleLogin')" class="bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-xs font-bold px-2.5 py-1.5 rounded-full shadow-sm transition flex items-center gap-1.5 active:scale-95">
+            <i class="fa-brands fa-google text-red-500 text-xs sm:text-sm"></i>
+            <span class="hidden sm:inline">Entrar com Google</span>
+            <span class="sm:hidden text-[11px]">Entrar</span>
+          </button>
+        `;
+      }
+      toast('Logout realizado.');
+    }
+
+    function toggleInputNomeFicticio() {
+      const radioFicticio = document.querySelector('input[name="opcaoIdentidade"][value="ficticio"]');
+      const container = document.getElementById('containerNomeFicticio');
+      if (radioFicticio && radioFicticio.checked) {
+        container.classList.remove('hidden');
+      } else {
+        container.classList.add('hidden');
+      }
+    }
+
+    // HELPER - GERADOR DE CARD DE LOJA
+    function criarCardLojaHTML(loja) {
+      const badges = {
+        'Anthor': 'bg-purple-600 text-white',
+        'Hellpi': 'bg-orange-500 text-white',
+        'Zubale': 'bg-teal-600 text-white',
+        'Outras': 'bg-slate-700 text-white'
+      };
+
+      const qtdComentarios = loja.comentarios ? loja.comentarios.length : 0;
+
+      // Ranking de notas
+      const notasUnicas = [...new Set(lojas.map(l => parseFloat(l.nota) || 0))].sort((a, b) => b - a);
+      const maxNotaGlobal = notasUnicas[0] || 0;
+      const segundaMaxNota = notasUnicas.length > 1 ? notasUnicas[1] : -1;
+      const terceiraMaxNota = notasUnicas.length > 2 ? notasUnicas[2] : -1;
+      const minNotaGlobal = notasUnicas.length > 3 ? notasUnicas[notasUnicas.length - 1] : -1;
+
+      const notaLoja = parseFloat(loja.nota) || 0;
+      let badgeDestaqueHTML = '';
+
+      if (notaLoja === maxNotaGlobal && maxNotaGlobal > 0) {
+        badgeDestaqueHTML = `
+          <span class="absolute top-2 right-2 bg-gradient-to-r from-amber-700 via-orange-600 to-amber-800 text-amber-100 font-black text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded-md shadow-md flex items-center gap-1 border border-amber-500 z-10 animate-pulse-bronze max-w-[60%] truncate">
+            <i class="fa-solid fa-trophy text-amber-200 text-[10px]"></i> <span class="truncate">Melhor Avaliada</span>
+          </span>
+        `;
+      } else if (notaLoja === segundaMaxNota && segundaMaxNota > 0) {
+        badgeDestaqueHTML = `
+          <span class="absolute top-2 right-2 bg-gradient-to-r from-slate-200 via-slate-100 to-slate-300 text-slate-800 font-black text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded-md shadow-md flex items-center gap-1 border border-slate-300 z-10 animate-pulse-silver max-w-[60%] truncate">
+            <i class="fa-solid fa-medal text-slate-600 text-[10px]"></i> <span class="truncate">2ª Melhor</span>
+          </span>
+        `;
+      } else if (notaLoja === terceiraMaxNota && terceiraMaxNota > 0) {
+        badgeDestaqueHTML = `
+          <span class="absolute top-2 right-2 bg-gradient-to-r from-amber-400 to-yellow-500 text-amber-950 font-black text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded-md shadow-md flex items-center gap-1 border border-amber-300 z-10 animate-pulse-slow max-w-[60%] truncate">
+            <i class="fa-solid fa-award text-amber-900 text-[10px]"></i> <span class="truncate">3ª Melhor</span>
+          </span>
+        `;
+      } else if (notaLoja === minNotaGlobal && minNotaGlobal >= 0 && notasUnicas.length > 3) {
+        badgeDestaqueHTML = `
+          <span class="absolute top-2 right-2 bg-gradient-to-r from-rose-500 to-red-600 text-white font-black text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded-md shadow-md flex items-center gap-1 border border-rose-400 z-10 animate-pulse-red max-w-[60%] truncate">
+            <i class="fa-solid fa-thumbs-down text-white text-[10px]"></i> <span class="truncate">Pior Avaliada</span>
+          </span>
+        `;
+      }
+
+      let indicadoresHTML = '';
+      if (loja.avaliacoesCount > 0) {
+        const temRefeicao = (loja.refeicaoSim || 0) > (loja.avaliacoesCount / 2);
+        const temCafe = (loja.cafeSim || 0) > (loja.avaliacoesCount / 2);
+        const temMicroondas = (loja.microondasSim || 0) > (loja.avaliacoesCount / 2);
+        const podeRefeitorio = (loja.refeitorioSim || 0) > (loja.avaliacoesCount / 2);
+        const pctVoltaria = Math.round(((loja.voltariaSim || 0) / loja.avaliacoesCount) * 100);
+
+        indicadoresHTML = `
+          <div class="flex flex-wrap items-center gap-1 pt-1 text-[9px] sm:text-[10px] font-extrabold">
+            <span class="px-1.5 py-0.5 rounded ${temRefeicao ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-500'}">
+              <i class="fa-solid fa-utensils mr-0.5"></i> ${temRefeicao ? 'Refeição' : 'Sem Refeição'}
+            </span>
+            <span class="px-1.5 py-0.5 rounded ${temCafe ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-500'}">
+              <i class="fa-solid fa-mug-hot mr-0.5"></i> ${temCafe ? 'Café' : 'Sem Café'}
+            </span>
+            <span class="px-1.5 py-0.5 rounded ${temMicroondas ? 'bg-orange-100 text-orange-800' : 'bg-slate-100 text-slate-500'}">
+              <i class="fa-solid fa-fire-burner mr-0.5"></i> ${temMicroondas ? 'Micro-ondas' : 'Sem Micro-ondas'}
+            </span>
+            <span class="px-1.5 py-0.5 rounded ${podeRefeitorio ? 'bg-purple-100 text-purple-800' : 'bg-slate-100 text-slate-500'}">
+              <i class="fa-solid fa-chair mr-0.5"></i> ${podeRefeitorio ? 'Refeitório' : 'Sem Refeitório'}
+            </span>
+            <span class="px-1.5 py-0.5 rounded ${pctVoltaria >= 70 ? 'bg-blue-100 text-blue-800' : 'bg-slate-100 text-slate-600'}">
+              <i class="fa-solid fa-rotate-left mr-0.5"></i> ${pctVoltaria}% voltariam
+            </span>
+          </div>
+        `;
+      }
+
+      const adminActionsHTML = modoAdmin ? `
+        <div class="flex items-center gap-1 p-1.5 bg-amber-50 border-t border-amber-200">
+          <button onclick="abrirModalEditarLoja(${loja.id})" class="flex-1 bg-amber-500 hover:bg-amber-600 text-white text-[10px] font-bold py-1 rounded transition flex items-center justify-center gap-1">
+            <i class="fa-solid fa-pen-to-square"></i> Editar
+          </button>
+          <button onclick="excluirLoja(${loja.id})" class="flex-1 bg-rose-600 hover:bg-rose-700 text-white text-[10px] font-bold py-1 rounded transition flex items-center justify-center gap-1">
+            <i class="fa-solid fa-trash-can"></i> Excluir
+          </button>
+        </div>
+      ` : '';
+
+      return `
+        <div class="loja-card card-hover bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col justify-between w-full">
+          <div onclick="abrirModalComentarios(${loja.id})" class="cursor-pointer group">
+            <div class="relative h-32 sm:h-36 bg-slate-100 overflow-hidden">
+              <img 
+                src="${loja.imagem}" 
+                alt="${loja.nome}" 
+                class="w-full h-full object-cover group-hover:scale-105 transition duration-300" 
+                onerror="this.src='https://placehold.co/600x400/1e293b/ffffff?text=${encodeURIComponent(loja.nome)}'"
+              >
+              <span class="absolute top-2 left-2 ${badges[loja.plataforma] || 'bg-slate-800 text-white'} text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded shadow-sm">
+                ${loja.plataforma}
+              </span>
+              ${badgeDestaqueHTML}
+              
+              ${modoAdmin ? `
+                <button onclick="event.stopPropagation(); abrirModalTrocarImagem(${loja.id})" class="absolute bottom-2 left-2 bg-slate-900/85 hover:bg-black text-white text-[9px] font-bold px-2 py-0.5 rounded backdrop-blur-sm transition flex items-center gap-1 z-20 shadow">
+                  <i class="fa-solid fa-camera text-amber-400"></i> Trocar
+                </button>
+              ` : ''}
+
+              <div class="absolute bottom-2 right-2 bg-white/95 backdrop-blur-sm text-slate-900 text-[11px] font-bold px-2 py-0.5 rounded shadow flex items-center gap-1">
+                <i class="fa-solid fa-star text-amber-400 text-xs"></i> ${loja.nota} 
+                <span class="text-slate-400 font-normal text-[10px]">(${loja.avaliacoesCount})</span>
+              </div>
+            </div>
+
+            <div class="p-3 space-y-1">
+              <div class="flex items-center justify-between">
+                <span class="text-[9px] font-extrabold uppercase tracking-wider text-slate-400">${loja.tipo}</span>
+                ${loja.grupo ? `<span class="text-[9px] font-black text-brand-600 bg-brand-50 px-1.5 py-0.2 rounded">${loja.grupo}</span>` : ''}
+              </div>
+              <h3 class="font-extrabold text-slate-900 text-xs sm:text-sm leading-snug truncate group-hover:text-brand-600 transition">${loja.nome}</h3>
+              <p class="text-[11px] text-slate-500 flex items-center gap-1 truncate">
+                <i class="fa-solid fa-location-dot text-slate-400 text-[10px]"></i> ${loja.bairro}
+              </p>
+              ${indicadoresHTML}
+            </div>
+          </div>
+
+          <div>
+            ${adminActionsHTML}
+            <div class="p-3 pt-1 flex items-center gap-1.5">
+              <button onclick="abrirModalComentarios(${loja.id})" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] sm:text-[11px] font-bold py-2 rounded-xl transition flex items-center justify-center gap-1 border border-slate-200">
+                <i class="fa-regular fa-comment-dots text-brand-600"></i> Ver (${qtdComentarios})
+              </button>
+              <button onclick="abrirModalAvaliacao('${loja.nome.replace(/'/g, "\\'")}')" class="flex-1 bg-brand-600 hover:bg-brand-700 text-white text-[10px] sm:text-[11px] font-bold py-2 rounded-xl shadow transition flex items-center justify-center gap-1">
+                <i class="fa-regular fa-star text-amber-300"></i> Avaliar
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // RENDERIZAÇÃO DAS SEÇÕES
+    function renderizarTodasLojas() {
+      const plataformas = ['Anthor', 'Hellpi', 'Zubale', 'Outras'];
+      let totalExibidas = 0;
+
+      plataformas.forEach(plat => {
+        const grid = document.getElementById(`grid-${plat}`);
+        const sec = document.getElementById(`sec-${plat}`);
+        if (!grid) return;
+
+        const lojasPlat = lojas.filter(loja => {
+          if (loja.plataforma !== plat) return false;
+
+          // Filtro por Grupo MG
+          if (grupoAtivo !== 'todos' && loja.grupo !== grupoAtivo) {
+            return false;
+          }
+
+          if (termoBusca) {
+            const t = termoBusca.toLowerCase();
+            const emNome = loja.nome.toLowerCase().includes(t);
+            const emBairro = loja.bairro.toLowerCase().includes(t);
+            const emPlat = loja.plataforma.toLowerCase().includes(t);
+            const emTipo = loja.tipo.toLowerCase().includes(t);
+            const emGrupo = (loja.grupo || '').toLowerCase().includes(t);
+            if (!emNome && !emBairro && !emPlat && !emTipo && !emGrupo) return false;
+          }
+
+          return true;
+        });
+
+        if (lojasPlat.length > 0) {
+          if (sec) sec.classList.remove('hidden');
+          grid.innerHTML = lojasPlat.map(l => criarCardLojaHTML(l)).join('');
+          totalExibidas += lojasPlat.length;
+        } else {
+          if (sec) sec.classList.add('hidden');
+          grid.innerHTML = '';
         }
-        window.showToast = showToast;
+      });
 
-        if (firebaseReady) {
-            signInAnonymously(auth).catch(() => {});
-            onAuthStateChanged(auth, (u) => {
-                if (u && !u.isAnonymous) {
-                    window.state.user = u;
-                    if (u.email === AUTHORIZED_ADMIN_EMAIL) {
-                        window.state.userRole = 'ADMIN';
-                    } else {
-                        window.state.userRole = 'FREELANCER';
-                    }
-                } else {
-                    window.state.userRole = 'FREELANCER';
-                }
-                render();
-            });
+      const secFreela = document.getElementById('freelancers');
+      if (secFreela) {
+        secFreela.classList.remove('hidden');
+      }
 
-            // Sincronização em Tempo Real do Firestore
-            try {
-                onSnapshot(collection(db, 'stores'), (snapshot) => {
-                    if (snapshot && !snapshot.empty) {
-                        const loaded = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-                        window.state.stores = loaded;
-                        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(loaded));
-                        render();
-                    }
-                }, (err) => console.error(err));
-            } catch(e) {}
+      atualizarContadorResultados(totalExibidas);
+    }
+
+    function renderizarFreelancers() {
+      const grid = document.getElementById('grid-Freelancers');
+      if (!grid) return;
+
+      const freelasFiltrados = freelancers.filter(f => {
+        if (termoBusca) {
+          const t = termoBusca.toLowerCase();
+          const emNome = f.nome.toLowerCase().includes(t);
+          const emFuncao = f.funcao.toLowerCase().includes(t);
+          const emDisp = f.disp.toLowerCase().includes(t);
+          if (!emNome && !emFuncao && !emDisp) return false;
         }
+        return true;
+      });
 
-        const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+      if (freelasFiltrados.length === 0) {
+        grid.innerHTML = `
+          <div class="col-span-full text-center py-6 text-slate-400 text-xs">
+            Nenhum freelancer encontrado com "${termoBusca}".
+          </div>
+        `;
+        return;
+      }
 
-        function calculateScore(stats) {
-            const safeStats = stats || {};
-            const getRatio = (item) => {
-                const sub = item || { yes: 0, no: 0 };
-                const total = (sub.yes || 0) + (sub.no || 0);
-                if (total === 0) return 3;
-                return ((sub.yes || 0) / total) * 5;
-            };
-            const c = getRatio(safeStats.coffee);
-            const l = getRatio(safeStats.lunch);
-            const m = getRatio(safeStats.microwave);
-            const b = getRatio(safeStats.breakTime);
-            const f = safeStats.flexibility || 3;
-            return Number(((c * 0.15) + (l * 0.15) + (m * 0.15) + (b * 0.25) + (f * 0.30)).toFixed(1));
+      grid.innerHTML = freelasFiltrados.map(f => `
+        <div class="bg-white rounded-2xl border border-slate-200 p-3.5 shadow-sm space-y-2.5 flex flex-col justify-between card-hover w-full">
+          <div class="flex items-center gap-2.5">
+            <img src="${f.foto}" alt="${f.nome}" class="w-10 h-10 rounded-full object-cover border-2 border-brand-500 shrink-0">
+            <div class="min-w-0">
+              <h3 class="font-bold text-slate-900 text-xs sm:text-sm truncate">${f.nome}</h3>
+              <p class="text-[11px] text-brand-600 font-semibold truncate">${f.funcao}</p>
+              <div class="flex items-center gap-1 text-amber-400 text-[11px]">
+                <i class="fa-solid fa-star"></i>
+                <span class="text-slate-700 font-bold text-[10px]">${f.nota}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-slate-50 p-2 rounded-xl text-[11px] text-slate-600 font-medium truncate">
+            <i class="fa-regular fa-clock text-brand-500 mr-1"></i> ${f.disp}
+          </div>
+
+          <a href="https://wa.me/${f.whats}?text=${encodeURIComponent('Olá! Vi seu anúncio no Guia & Freela e gostaria de combinar um serviço em MG.')}" target="_blank" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs py-2 rounded-xl shadow transition flex items-center justify-center gap-1.5">
+            <i class="fa-brands fa-whatsapp text-sm"></i> Chamar no WhatsApp
+          </a>
+        </div>
+      `).join('');
+    }
+
+    // FILTRO DE GRUPOS MG
+    function filtrarGrupo(grupo) {
+      grupoAtivo = grupo;
+
+      document.querySelectorAll('.btn-grupo').forEach(btn => {
+        btn.className = 'btn-grupo font-bold text-[11px] px-2.5 py-1 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all duration-150 cursor-pointer shrink-0';
+      });
+
+      const btnAtivo = document.getElementById(`btnGrupo-${grupo}`);
+      if (btnAtivo) {
+        btnAtivo.className = 'btn-grupo font-black text-[11px] px-2.5 py-1 rounded-xl bg-slate-900 text-white shadow-sm transition-all duration-150 cursor-pointer shrink-0';
+      }
+
+      renderizarTodasLojas();
+    }
+
+    function filtrarGeral(termo) {
+      termoBusca = termo.trim();
+
+      const inDesktop = document.getElementById('searchInputDesktop');
+      const inMobile = document.getElementById('searchInputMobile');
+      const clearBtn = document.getElementById('clearSearchBtn');
+
+      if (inDesktop && inDesktop.value !== termo) inDesktop.value = termo;
+      if (inMobile && inMobile.value !== termo) inMobile.value = termo;
+
+      if (clearBtn) {
+        if (termoBusca.length > 0) clearBtn.classList.remove('hidden');
+        else clearBtn.classList.add('hidden');
+      }
+
+      renderizarTodasLojas();
+      renderizarFreelancers();
+    }
+
+    function limparBusca() {
+      filtrarGeral('');
+    }
+
+    function atualizarContadorResultados(qtdLojas) {
+      const el = document.getElementById('contadorResultados');
+      if (el) {
+        el.textContent = `${qtdLojas} loja(s) MG`;
+      }
+    }
+
+    // AVALIAÇÕES E ESTRELAS
+    function abrirModalAvaliacao(nome) {
+      if (!usuarioGoogleLogado) {
+        toast('Faça login com sua conta Google para avaliar!');
+        abrirModal('modalGoogleLogin');
+        return;
+      }
+
+      lojaModalNome = nome;
+      document.getElementById('nomeLojaModal').textContent = nome;
+      
+      const labelUser = document.getElementById('labelNomeGoogleUser');
+      if (labelUser) labelUser.textContent = usuarioGoogleLogado.nome;
+
+      definirNota(0);
+      evalRefeicao = null;
+      evalCafe = null;
+      evalMicroondas = null;
+      evalRefeitorio = null;
+      evalVoltaria = null;
+
+      atualizarBotoesOpcao('Refeicao', null);
+      atualizarBotoesOpcao('Cafe', null);
+      atualizarBotoesOpcao('Microondas', null);
+      atualizarBotoesOpcao('Refeitorio', null);
+      atualizarBotoesOpcao('Voltaria', null);
+
+      document.getElementById('comentarioAvaliacao').value = '';
+      
+      const radioGoogle = document.querySelector('input[name="opcaoIdentidade"][value="google"]');
+      if (radioGoogle) radioGoogle.checked = true;
+      toggleInputNomeFicticio();
+
+      abrirModal('modalAvaliacao');
+    }
+
+    function definirNota(n) {
+      notaSelecionadaModal = n;
+      const container = document.getElementById('starsContainer');
+      const label = document.getElementById('labelNota');
+
+      if (container) {
+        const btns = container.querySelectorAll('.star-btn');
+        btns.forEach((btn, idx) => {
+          if (idx < n) {
+            btn.className = 'star-btn text-amber-400';
+          } else {
+            btn.className = 'star-btn text-slate-300';
+          }
+        });
+      }
+
+      const textosNotas = ['', 'Péssima', 'Ruim', 'Regular', 'Boa', 'Excelente'];
+      if (label) {
+        label.textContent = textosNotas[n] || '';
+      }
+    }
+
+    function selecionarOpcao(campo, val) {
+      if (campo === 'refeicao') evalRefeicao = val;
+      if (campo === 'cafe') evalCafe = val;
+      if (campo === 'microondas') evalMicroondas = val;
+      if (campo === 'refeitorio') evalRefeitorio = val;
+      if (campo === 'voltaria') evalVoltaria = val;
+
+      const campoCap = campo.charAt(0).toUpperCase() + campo.slice(1);
+      atualizarBotoesOpcao(campoCap, val);
+    }
+
+    function atualizarBotoesOpcao(campoCap, val) {
+      const btnSim = document.getElementById(`btn${campoCap}Sim`);
+      const btnNao = document.getElementById(`btn${campoCap}Nao`);
+
+      if (!btnSim || !btnNao) return;
+
+      btnSim.className = 'px-2.5 py-1 rounded-lg transition text-slate-600 hover:text-slate-900';
+      btnNao.className = 'px-2.5 py-1 rounded-lg transition text-slate-600 hover:text-slate-900';
+
+      if (val === 'Sim') {
+        btnSim.className = 'px-2.5 py-1 rounded-lg transition bg-emerald-600 text-white font-bold shadow-sm';
+      } else if (val === 'Não') {
+        btnNao.className = 'px-2.5 py-1 rounded-lg transition bg-rose-600 text-white font-bold shadow-sm';
+      }
+    }
+
+    function enviarAvaliacao() {
+      if (notaSelecionadaModal === 0) {
+        toast('Por favor, avalie a Gestão da loja com estrelas.');
+        return;
+      }
+      if (!evalRefeicao) {
+        toast('Informe se oferece refeição.');
+        return;
+      }
+      if (!evalCafe) {
+        toast('Informe se oferece café.');
+        return;
+      }
+      if (!evalMicroondas) {
+        toast('Informe se tem micro-ondas.');
+        return;
+      }
+      if (!evalRefeitorio) {
+        toast('Informe sobre o refeitório.');
+        return;
+      }
+      if (!evalVoltaria) {
+        toast('Informe se voltaria a atuar.');
+        return;
+      }
+
+      let autorFinal = usuarioGoogleLogado ? usuarioGoogleLogado.nome : 'Freelancer';
+      const opcaoIdentidade = document.querySelector('input[name="opcaoIdentidade"]:checked')?.value;
+
+      if (opcaoIdentidade === 'ficticio') {
+        const inputFicticio = document.getElementById('inputNomeFicticio').value.trim();
+        if (!inputFicticio) {
+          toast('Digite o apelido desejado.');
+          return;
         }
+        autorFinal = inputFicticio + ' (Apelido)';
+      } else if (opcaoIdentidade === 'anonimo') {
+        autorFinal = 'Anônimo';
+      }
 
-        function getMajority(item) {
-            const sub = item || { yes: 0, no: 0 };
-            const yes = sub.yes || 0;
-            const no = sub.no || 0;
-            if (yes === 0 && no === 0) return 'SIM';
-            return yes >= no ? 'SIM' : 'NÃO';
+      const comentarioTexto = document.getElementById('comentarioAvaliacao').value.trim();
+
+      const lojaObj = lojas.find(l => l.nome === lojaModalNome);
+      if (lojaObj) {
+        const total = (parseFloat(lojaObj.nota) * lojaObj.avaliacoesCount) + notaSelecionadaModal;
+        lojaObj.avaliacoesCount += 1;
+        lojaObj.nota = (total / lojaObj.avaliacoesCount).toFixed(1);
+
+        if (evalRefeicao === 'Sim') lojaObj.refeicaoSim = (lojaObj.refeicaoSim || 0) + 1;
+        if (evalCafe === 'Sim') lojaObj.cafeSim = (lojaObj.cafeSim || 0) + 1;
+        if (evalMicroondas === 'Sim') lojaObj.microondasSim = (lojaObj.microondasSim || 0) + 1;
+        if (evalRefeitorio === 'Sim') lojaObj.refeitorioSim = (lojaObj.refeitorioSim || 0) + 1;
+        if (evalVoltaria === 'Sim') lojaObj.voltariaSim = (lojaObj.voltariaSim || 0) + 1;
+
+        if (!lojaObj.comentarios) lojaObj.comentarios = [];
+
+        lojaObj.comentarios.unshift({
+          autor: autorFinal,
+          nota: notaSelecionadaModal,
+          refeicao: evalRefeicao,
+          cafe: evalCafe,
+          microondas: evalMicroondas,
+          refeitorio: evalRefeitorio,
+          voltaria: evalVoltaria,
+          texto: comentarioTexto || "Nota e avaliação registradas.",
+          data: "Agora mesmo"
+        });
+      }
+
+      fecharModal('modalAvaliacao');
+      renderizarTodasLojas();
+      toast(`Obrigado! Sua avaliação foi registrada.`);
+    }
+
+    // MODAL COMENTÁRIOS LOJA
+    function abrirModalComentarios(lojaId) {
+      const loja = lojas.find(l => l.id === lojaId);
+      if (!loja) return;
+
+      document.getElementById('nomeLojaModalComentarios').textContent = loja.nome;
+      document.getElementById('bairroLojaModalComentarios').querySelector('span').textContent = loja.bairro;
+      document.getElementById('tipoLojaModalComentarios').textContent = `${loja.tipo} ${loja.grupo ? '• ' + loja.grupo : ''}`;
+
+      const platBadge = document.getElementById('platBadgeModalComentarios');
+      platBadge.textContent = loja.plataforma;
+      
+      const badges = {
+        'Anthor': 'bg-purple-600',
+        'Hellpi': 'bg-orange-500',
+        'Zubale': 'bg-teal-600',
+        'Outras': 'bg-slate-700'
+      };
+      platBadge.className = `text-[9px] font-black uppercase px-2 py-0.5 rounded text-white ${badges[loja.plataforma] || 'bg-slate-800'}`;
+
+      const btnAvaliar = document.getElementById('btnAvaliarDaModalComentarios');
+      btnAvaliar.onclick = () => {
+        fecharModal('modalVerComentarios');
+        abrirModalAvaliacao(loja.nome);
+      };
+
+      const pctVoltaria = loja.avaliacoesCount > 0 ? Math.round(((loja.voltariaSim || 0) / loja.avaliacoesCount) * 100) : 0;
+      const temRefeicao = (loja.refeicaoSim || 0) > (loja.avaliacoesCount / 2);
+      const temCafe = (loja.cafeSim || 0) > (loja.avaliacoesCount / 2);
+      const temMicroondas = (loja.microondasSim || 0) > (loja.avaliacoesCount / 2);
+      const podeRefeitorio = (loja.refeitorioSim || 0) > (loja.avaliacoesCount / 2);
+
+      const resumoContainer = document.getElementById('resumoLojaModalComentarios');
+      resumoContainer.innerHTML = `
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="text-xl sm:text-2xl font-black text-slate-900">${loja.nota}</span>
+            <div>
+              <div class="flex text-amber-400 text-xs">
+                ${'<i class="fa-solid fa-star"></i>'.repeat(Math.min(5, Math.max(1, Math.round(parseFloat(loja.nota)))))}
+              </div>
+              <span class="text-[10px] sm:text-[11px] text-slate-500 font-semibold">${loja.avaliacoesCount} avaliação(ões)</span>
+            </div>
+          </div>
+          <span class="text-[11px] font-extrabold px-2 py-0.5 rounded-xl ${pctVoltaria >= 70 ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-700'}">
+            <i class="fa-solid fa-rotate-left mr-0.5"></i> ${pctVoltaria}% voltariam
+          </span>
+        </div>
+        <div class="flex flex-wrap gap-1.5 pt-1 text-[10px] font-bold">
+          <span class="px-2 py-0.5 rounded-md ${temRefeicao ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}">
+            <i class="fa-solid fa-utensils mr-0.5"></i> ${temRefeicao ? 'Refeição' : 'Sem Refeição'}
+          </span>
+          <span class="px-2 py-0.5 rounded-md ${temCafe ? 'bg-amber-100 text-amber-800' : 'bg-rose-100 text-rose-800'}">
+            <i class="fa-solid fa-mug-hot mr-0.5"></i> ${temCafe ? 'Café' : 'Sem Café'}
+          </span>
+          <span class="px-2 py-0.5 rounded-md ${temMicroondas ? 'bg-orange-100 text-orange-800' : 'bg-rose-100 text-rose-800'}">
+            <i class="fa-solid fa-fire-burner mr-0.5"></i> ${temMicroondas ? 'Micro-ondas' : 'Sem Micro-ondas'}
+          </span>
+          <span class="px-2 py-0.5 rounded-md ${podeRefeitorio ? 'bg-purple-100 text-purple-800' : 'bg-rose-100 text-rose-800'}">
+            <i class="fa-solid fa-chair mr-0.5"></i> ${podeRefeitorio ? 'Refeitório' : 'Sem Refeitório'}
+          </span>
+        </div>
+      `;
+
+      const listaContainer = document.getElementById('listaComentariosContainer');
+      const coms = loja.comentarios || [];
+
+      if (coms.length === 0) {
+        listaContainer.innerHTML = `
+          <div class="text-center py-6 bg-slate-50 rounded-2xl border border-dashed border-slate-200 space-y-1">
+            <p class="text-xs text-slate-400 font-bold">Nenhum comentário ainda.</p>
+            <p class="text-[10px] text-slate-400">Seja o primeiro a avaliar esta loja em MG!</p>
+          </div>
+        `;
+      } else {
+        listaContainer.innerHTML = coms.map((c, idx) => {
+          const btnExcluirComentario = modoAdmin ? `
+            <button onclick="excluirComentario(${loja.id}, ${idx})" class="text-rose-500 hover:text-rose-700 text-xs p-1" title="Excluir Comentário">
+              <i class="fa-solid fa-trash-can"></i>
+            </button>
+          ` : '';
+
+          return `
+            <div class="bg-slate-50 p-3 rounded-2xl border border-slate-100 space-y-1.5">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2 min-w-0">
+                  <div class="w-6 h-6 rounded-full bg-brand-100 text-brand-700 font-extrabold text-[10px] flex items-center justify-center shrink-0">
+                    ${c.autor.charAt(0)}
+                  </div>
+                  <div class="min-w-0">
+                    <h4 class="text-xs font-extrabold text-slate-900 truncate">${c.autor}</h4>
+                    <span class="text-[9px] text-slate-400">${c.data}</span>
+                  </div>
+                </div>
+                <div class="flex items-center gap-1.5 shrink-0">
+                  <div class="flex items-center gap-0.5 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded text-amber-700 text-[10px] font-bold">
+                    <i class="fa-solid fa-star text-amber-400 text-[9px]"></i> ${c.nota}.0
+                  </div>
+                  ${btnExcluirComentario}
+                </div>
+              </div>
+
+              <p class="text-xs text-slate-700 leading-relaxed font-medium">${c.texto}</p>
+
+              <div class="flex flex-wrap items-center gap-1.5 pt-1 border-t border-slate-200/60 text-[9px] text-slate-500 font-semibold">
+                <span>Refeição: <strong>${c.refeicao || 'N/A'}</strong></span>
+                <span>•</span>
+                <span>Café: <strong>${c.cafe || 'N/A'}</strong></span>
+                <span>•</span>
+                <span>Micro-ondas: <strong>${c.microondas || 'N/A'}</strong></span>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      abrirModal('modalVerComentarios');
+    }
+
+    // ADMIN FUNCTIONS
+    function abrirModalTrocarImagem(lojaId) {
+      if (!modoAdmin) {
+        toast('Apenas administradores podem alterar imagens.');
+        return;
+      }
+
+      const loja = lojas.find(l => l.id === lojaId);
+      if (!loja) return;
+
+      document.getElementById('trocarImagemLojaId').value = loja.id;
+      document.getElementById('inputTrocarImagemUrl').value = loja.imagem;
+      atualizarPreviewTrocarImagem(loja.imagem);
+
+      abrirModal('modalTrocarImagem');
+    }
+
+    function atualizarPreviewTrocarImagem(url) {
+      const preview = document.getElementById('previewTrocarImagem');
+      if (preview) {
+        preview.src = url || 'https://placehold.co/600x400/1e293b/ffffff?text=Sem+Imagem';
+      }
+    }
+
+    function selecionarPresetImagem(url) {
+      document.getElementById('inputTrocarImagemUrl').value = url;
+      atualizarPreviewTrocarImagem(url);
+    }
+
+    function salvarTrocaImagemLoja() {
+      if (!modoAdmin) return;
+
+      const id = parseInt(document.getElementById('trocarImagemLojaId').value);
+      const url = document.getElementById('inputTrocarImagemUrl').value.trim();
+
+      const loja = lojas.find(l => l.id === id);
+      if (loja) {
+        loja.imagem = url || "https://images.unsplash.com/photo-1578916171728-46686eac8d58?auto=format&fit=crop&q=80&w=600";
+        fecharModal('modalTrocarImagem');
+        renderizarTodasLojas();
+        toast(`Imagem da loja "${loja.nome}" atualizada!`);
+      }
+    }
+
+    function abrirModalEditarLoja(lojaId) {
+      if (!modoAdmin) return;
+
+      const loja = lojas.find(l => l.id === lojaId);
+      if (!loja) return;
+
+      document.getElementById('editLojaId').value = loja.id;
+      document.getElementById('editLojaNome').value = loja.nome;
+      document.getElementById('editLojaGrupo').value = loja.grupo || 'Outros';
+      document.getElementById('editLojaPlataforma').value = loja.plataforma;
+      document.getElementById('editLojaTipo').value = loja.tipo;
+      document.getElementById('editLojaBairro').value = loja.bairro;
+      document.getElementById('editLojaImagem').value = loja.imagem;
+
+      abrirModal('modalEditarLoja');
+    }
+
+    function salvarEdicaoLoja(e) {
+      e.preventDefault();
+      
+      const id = parseInt(document.getElementById('editLojaId').value);
+      const loja = lojas.find(l => l.id === id);
+
+      if (loja) {
+        loja.nome = document.getElementById('editLojaNome').value;
+        loja.grupo = document.getElementById('editLojaGrupo').value;
+        loja.plataforma = document.getElementById('editLojaPlataforma').value;
+        loja.tipo = document.getElementById('editLojaTipo').value;
+        loja.bairro = document.getElementById('editLojaBairro').value;
+        loja.imagem = document.getElementById('editLojaImagem').value || loja.imagem;
+
+        fecharModal('modalEditarLoja');
+        renderizarTodasLojas();
+        toast(`Loja "${loja.nome}" atualizada!`);
+      }
+    }
+
+    function excluirLoja(lojaId) {
+      if (!modoAdmin) return;
+
+      const index = lojas.findIndex(l => l.id === lojaId);
+      if (index !== -1) {
+        const nomeRemovido = lojas[index].nome;
+        lojas.splice(index, 1);
+        renderizarTodasLojas();
+        toast(`Loja "${nomeRemovido}" excluída.`);
+      }
+    }
+
+    function excluirComentario(lojaId, commentIndex) {
+      if (!modoAdmin) return;
+
+      const loja = lojas.find(l => l.id === lojaId);
+      if (loja && loja.comentarios && loja.comentarios[commentIndex]) {
+        loja.comentarios.splice(commentIndex, 1);
+        if (loja.avaliacoesCount > 1) loja.avaliacoesCount -= 1;
+
+        renderizarTodasLojas();
+        abrirModalComentarios(lojaId);
+        toast('Comentário removido.');
+      }
+    }
+
+    function verificarTipoOutro() {
+      const selectTipo = document.getElementById('cadLojaTipo');
+      const containerOutro = document.getElementById('containerTipoOutro');
+      const inputEspecifico = document.getElementById('cadLojaTipoEspecifico');
+
+      if (selectTipo.value === 'Outros') {
+        containerOutro.classList.remove('hidden');
+        inputEspecifico.setAttribute('required', 'required');
+      } else {
+        containerOutro.classList.add('hidden');
+        inputEspecifico.removeAttribute('required');
+      }
+    }
+
+    function gerarLojaAleatoria() {
+      const lojasAleatorias = [
+        {
+          nome: "Supernosso - Savassi",
+          grupo: "Supernosso",
+          plataforma: "Anthor",
+          tipoSel: "Supermercado",
+          tipoEsp: "",
+          bairro: "Savassi - BH",
+          imagem: "https://images.unsplash.com/photo-1578916171728-46686eac8d58?auto=format&fit=crop&q=80&w=600"
+        },
+        {
+          nome: "Carrefour Hipermercado - Pampulha",
+          grupo: "Carrefour",
+          plataforma: "Anthor",
+          tipoSel: "Hipermercado",
+          tipoEsp: "",
+          bairro: "Pampulha - BH",
+          imagem: "https://images.unsplash.com/photo-1534723452862-4c874018d66d?auto=format&fit=crop&q=80&w=600"
+        },
+        {
+          nome: "Assaí Atacadista - Contagem",
+          grupo: "Assai",
+          plataforma: "Hellpi",
+          tipoSel: "Atacado e varejo",
+          tipoEsp: "",
+          bairro: "Eldorado - Contagem",
+          imagem: "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&q=80&w=600"
+        },
+        {
+          nome: "Mart Minas - Cidade Industrial",
+          grupo: "MartMinas",
+          plataforma: "Zubale",
+          tipoSel: "Atacado e varejo",
+          tipoEsp: "",
+          bairro: "Cidade Industrial - Contagem",
+          imagem: "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=600"
         }
+      ];
 
-        function getBadge(score, count) {
-            if (count === 0) return { label: 'Sem Avaliações', bg: 'bg-slate-100', text: 'text-slate-600', border: 'border-slate-300' };
-            if (score >= 4.0) return { label: 'Melhor Loja (Excelente)', bg: 'bg-emerald-100', text: 'text-emerald-800', border: 'border-emerald-300' };
-            if (score >= 2.5) return { label: 'Loja Média (Regular)', bg: 'bg-amber-100', text: 'text-amber-800', border: 'border-amber-300' };
-            return { label: 'Pior Loja (Atenção)', bg: 'bg-rose-100', text: 'text-rose-800', border: 'border-rose-300' };
-        }
+      const sorteada = lojasAleatorias[Math.floor(Math.random() * lojasAleatorias.length)];
 
-        window.handleGoogleLogin = async () => {
-            if (!firebaseReady) {
-                showToast('Chaves do Firebase não configuradas no index.html');
-                return;
-            }
-            try {
-                const provider = new GoogleAuthProvider();
-                const res = await signInWithPopup(auth, provider);
-                window.state.user = res.user;
-                
-                if (res.user.email === AUTHORIZED_ADMIN_EMAIL) {
-                    window.state.userRole = 'ADMIN';
-                    showToast('Logado como Administrador!');
-                } else {
-                    window.state.userRole = 'FREELANCER';
-                    showToast('Login realizado com sucesso!');
-                }
+      document.getElementById('cadLojaNome').value = sorteada.nome;
+      document.getElementById('cadLojaGrupo').value = sorteada.grupo;
+      document.getElementById('cadLojaPlataforma').value = sorteada.plataforma;
+      document.getElementById('cadLojaTipo').value = sorteada.tipoSel;
+      
+      verificarTipoOutro();
+      if (sorteada.tipoEsp) document.getElementById('cadLojaTipoEspecifico').value = sorteada.tipoEsp;
+      document.getElementById('cadLojaBairro').value = sorteada.bairro;
+      document.getElementById('cadLojaImagem').value = sorteada.imagem;
 
-                window.state.isAuthModalOpen = false;
-                render();
-            } catch (err) {
-                showToast('Não foi possível entrar com o Google.');
-            }
-        };
+      toast('🎲 Cadastro aleatório de loja MG preenchido!');
+    }
 
-        window.handleSignOut = async () => {
-            if (auth) await signOut(auth).catch(() => {});
-            window.state.user = null;
-            window.state.userRole = 'FREELANCER';
-            showToast('Sessão encerrada.');
-            render();
-        };
+    function salvarNovaLoja(e) {
+      e.preventDefault();
+      
+      if (!modoAdmin) return;
 
-        window.saveNewStore = async (e) => {
-            e.preventDefault();
-            if (window.state.userRole !== 'ADMIN') {
-                showToast('Apenas o administrador principal pode cadastrar lojas.');
-                return;
-            }
-            const f = window.state.newStoreForm;
-            if (!f.name || !f.name.trim()) {
-                showToast('Informe o nome do supermercado.');
-                return;
-            }
+      const nome = document.getElementById('cadLojaNome').value;
+      const grupo = document.getElementById('cadLojaGrupo').value;
+      const plataforma = document.getElementById('cadLojaPlataforma').value;
+      const selectTipo = document.getElementById('cadLojaTipo').value;
+      const tipoEspecifico = document.getElementById('cadLojaTipoEspecifico').value;
+      
+      const tipoFinal = (selectTipo === 'Outros' && tipoEspecifico.trim() !== '') ? tipoEspecifico.trim() : selectTipo;
+      const bairro = document.getElementById('cadLojaBairro').value;
+      const imagemInput = document.getElementById('cadLojaImagem').value;
 
-            const id = 'store_' + Date.now();
-            const fullAddress = [f.address.trim(), f.neighborhood ? `Bairro ${f.neighborhood}` : '', f.cityState].filter(Boolean).join(' - ') || 'Endereço não informado';
-            
-            const newObj = {
-                id,
-                name: f.name.trim(),
-                neighborhood: f.neighborhood.trim(),
-                address: fullAddress,
-                category: f.category || 'Supermercado',
-                registeredBy: 'Administrador',
-                stats: { coffee: {yes:0, no:0}, lunch: {yes:0, no:0}, microwave: {yes:0, no:0}, breakTime: {yes:0, no:0}, flexibility: 5 },
-                reviews: []
-            };
+      const novaLoja = {
+        id: Date.now(),
+        nome,
+        grupo,
+        plataforma,
+        tipo: tipoFinal,
+        bairro,
+        nota: "5.0",
+        avaliacoesCount: 1,
+        imagem: imagemInput || "https://images.unsplash.com/photo-1578916171728-46686eac8d58?auto=format&fit=crop&q=80&w=600"
+      };
 
-            if (firebaseReady) {
-                await setDoc(doc(db, 'stores', id), newObj);
-            } else {
-                window.state.stores = [newObj, ...window.state.stores];
-                localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(window.state.stores));
-            }
+      lojas.unshift(novaLoja);
+      renderizarTodasLojas();
+      fecharModal('modalCadastrarLoja');
+      toast(`Nova loja "${nome}" cadastrada em MG!`);
+      
+      e.target.reset();
+      verificarTipoOutro();
+    }
 
-            window.state.isAddStoreModalOpen = false;
-            window.state.newStoreForm = { name: '', neighborhood: '', address: '', category: 'Supermercado', cityState: 'Belo Horizonte, MG' };
-            showToast('Loja cadastrada com sucesso!');
-            render();
-        };
+    function salvarNovoFreela(e) {
+      e.preventDefault();
 
-        window.saveEditedStore = async (e) => {
-            e.preventDefault();
-            if (window.state.userRole !== 'ADMIN' || !window.state.editingStore) return;
-            const ed = window.state.editingStore;
-            
-            if (firebaseReady) {
-                await updateDoc(doc(db, 'stores', ed.id), {
-                    name: ed.name,
-                    neighborhood: ed.neighborhood,
-                    address: ed.address,
-                    category: ed.category
-                });
-            } else {
-                window.state.stores = window.state.stores.map(st => st.id === ed.id ? ed : st);
-                localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(window.state.stores));
-            }
+      const nome = document.getElementById('cadFreelaNome').value;
+      const funcao = document.getElementById('cadFreelaFuncao').value;
+      const whats = document.getElementById('cadFreelaWhats').value.replace(/\D/g,'');
+      const disp = document.getElementById('cadFreelaDisp').value || "Disponível para chamados em MG";
 
-            window.state.isEditStoreModalOpen = false;
-            window.state.editingStore = null;
-            showToast('Loja atualizada!');
-            render();
-        };
+      const novoFreela = {
+        id: Date.now(),
+        nome,
+        funcao,
+        nota: "5.0",
+        whats,
+        disp,
+        foto: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=200"
+      };
 
-        window.confirmDeleteStore = async () => {
-            const st = window.state.storeToDelete;
-            if (!st || window.state.userRole !== 'ADMIN') return;
+      freelancers.unshift(novoFreela);
+      renderizarFreelancers();
+      fecharModal('modalAnunciarFreela');
+      toast(`Anúncio publicado com sucesso!`);
 
-            if (firebaseReady) {
-                await deleteDoc(doc(db, 'stores', st.id));
-            } else {
-                window.state.stores = window.state.stores.filter(s => s.id !== st.id);
-                localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(window.state.stores));
-            }
+      e.target.reset();
+    }
 
-            window.state.storeToDelete = null;
-            window.state.selectedStoreDetail = null;
-            showToast('Loja excluída!');
-            render();
-        };
+    // LÓGICA DE ENQUETES
+    function renderizarEnquetes() {
+      const grid = document.getElementById('grid-Enquetes');
+      if (!grid) return;
 
-        window.submitReview = async (e) => {
-            if (e) e.preventDefault();
-            const rf = window.state.reviewForm;
-            if (!rf.storeId) {
-                showToast('Selecione uma loja para avaliar.');
-                return;
-            }
-            const target = window.state.stores.find(s => s.id === rf.storeId);
-            if (!target) return;
+      if (enquetes.length === 0) {
+        grid.innerHTML = `
+          <div class="col-span-full text-center py-6 bg-white rounded-3xl border border-dashed border-slate-200 p-4 space-y-2">
+            <i class="fa-solid fa-square-poll-vertical text-slate-300 text-2xl"></i>
+            <p class="text-xs font-bold text-slate-500">Nenhuma enquete no momento.</p>
+          </div>
+        `;
+        return;
+      }
 
-            const newRev = {
-                id: 'rev_' + Date.now(),
-                role: rf.role,
-                status: rf.status,
-                period: rf.period,
-                isAnonymous: rf.isAnonymous,
-                userName: rf.isAnonymous ? 'Anônimo' : (window.state.user?.displayName || 'Freelancer'),
-                date: 'Hoje',
-                rating: Number(rf.rating),
-                coffee: rf.coffee,
-                lunch: rf.lunch,
-                microwave: rf.microwave,
-                breakTime: rf.breakTime,
-                flexibility: Number(rf.flexibility),
-                comment: rf.comment
-            };
+      grid.innerHTML = enquetes.map(enq => {
+        const jaVotouOpcaoId = votosUsuario[enq.id];
+        const exibeResultados = jaVotouOpcaoId !== undefined || !enq.ativa;
 
-            const tStats = target.stats || { coffee: {yes:0, no:0}, lunch: {yes:0, no:0}, microwave: {yes:0, no:0}, breakTime: {yes:0, no:0}, flexibility: 5 };
+        const opcoesHTML = enq.opcoes.map(op => {
+          const pct = enq.totalVotos > 0 ? Math.round((op.votos / enq.totalVotos) * 100) : 0;
+          const foiEscolha = jaVotouOpcaoId === op.id;
 
-            const updatedStats = {
-                coffee: { yes: (tStats.coffee?.yes || 0) + (rf.coffee === 'SIM' ? 1 : 0), no: (tStats.coffee?.no || 0) + (rf.coffee === 'NÃO' ? 1 : 0) },
-                lunch: { yes: (tStats.lunch?.yes || 0) + (rf.lunch === 'SIM' ? 1 : 0), no: (tStats.lunch?.no || 0) + (rf.lunch === 'NÃO' ? 1 : 0) },
-                microwave: { yes: (tStats.microwave?.yes || 0) + (rf.microwave === 'SIM' ? 1 : 0), no: (tStats.microwave?.no || 0) + (rf.microwave === 'NÃO' ? 1 : 0) },
-                breakTime: { yes: (tStats.breakTime?.yes || 0) + (rf.breakTime === 'SIM' ? 1 : 0), no: (tStats.breakTime?.no || 0) + (rf.breakTime === 'NÃO' ? 1 : 0) },
-                flexibility: Number(((tStats.flexibility * (target.reviews?.length || 0) + Number(rf.flexibility)) / ((target.reviews?.length || 0) + 1)).toFixed(1))
-            };
-
-            const updatedStore = {
-                ...target,
-                stats: updatedStats,
-                reviews: [newRev, ...(target.reviews || [])]
-            };
-
-            if (firebaseReady) {
-                await setDoc(doc(db, 'stores', target.id), updatedStore, { merge: true });
-            } else {
-                window.state.stores = window.state.stores.map(s => s.id === target.id ? updatedStore : s);
-                localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(window.state.stores));
-            }
-
-            window.state.isReviewModalOpen = false;
-            window.state.reviewForm.comment = '';
-            showToast('Avaliação salva com sucesso!');
-            render();
-        };
-
-        function render() {
-            const root = document.getElementById('root');
-            if (!root) return;
-            
-            const filtered = window.state.stores.map(st => {
-                const score = calculateScore(st.stats);
-                const badge = getBadge(score, st.reviews ? st.reviews.length : 0);
-                return { ...st, score, badge };
-            }).filter(st => {
-                const matchSearch = st.name.toLowerCase().includes(window.state.searchTerm.toLowerCase()) || st.address.toLowerCase().includes(window.state.searchTerm.toLowerCase());
-                let matchCat = true;
-                if (window.state.selectedCategory === 'BEST') matchCat = st.score >= 4.0;
-                else if (window.state.selectedCategory === 'MEDIUM') matchCat = st.score >= 2.5 && st.score < 4.0;
-                else if (window.state.selectedCategory === 'WORST') matchCat = st.score < 2.5;
-                return matchSearch && matchCat;
-            }).sort((a,b) => {
-                if (window.state.sortBy === 'RATING') return b.score - a.score;
-                if (window.state.sortBy === 'REVIEWS') return (b.reviews?.length || 0) - (a.reviews?.length || 0);
-                return a.name.localeCompare(b.name);
-            });
-
-            root.innerHTML = `
-                ${window.state.toastMsg ? `
-                    <div class="fixed top-4 right-4 z-50 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2 border border-slate-700">
-                        <i data-lucide="sparkles" class="w-4 h-4 text-emerald-400"></i>
-                        <span class="text-xs font-semibold">\${window.state.toastMsg}</span>
-                    </div>
-                ` : ''}
-
-                <header class="bg-emerald-900 text-white shadow-lg sticky top-0 z-30">
-                    <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col items-center justify-center text-center gap-3">
-                        <div>
-                            <h1 class="text-xl font-black tracking-tight text-white">FreeEval Supermercados</h1>
-                            <p class="text-xs text-emerald-200">A comunidade colaborativa de freelancers</p>
-                        </div>
-                        <div class="flex items-center gap-2.5 flex-wrap justify-center">
-                            ${window.state.userRole === 'ADMIN' ? `
-                                <button onclick="window.openAddStore()" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold text-xs shadow-md transition flex items-center gap-1.5 whitespace-nowrap">
-                                    <i data-lucide="plus-circle" class="w-4 h-4"></i> Cadastrar Nova Loja
-                                </button>
-                            ` : ''}
-                            <button onclick="window.openReviewModal()" class="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold rounded-xl text-xs shadow-md transition flex items-center gap-1.5 whitespace-nowrap">
-                                <i data-lucide="plus-circle" class="w-4 h-4"></i> Avaliar Supermercado
-                            </button>
-                            ${window.state.user ? `
-                                <div class="flex items-center gap-3 bg-emerald-950/60 pl-3 pr-2 py-1.5 rounded-2xl border border-emerald-700/60 whitespace-nowrap">
-                                    <div class="text-right">
-                                        <div class="text-xs font-bold text-emerald-100">\${esc(window.state.user.displayName || window.state.user.email)}</div>
-                                        <div class="text-[10px] text-emerald-300">\${window.state.userRole === 'ADMIN' ? 'Administrador' : 'Freelancer'}</div>
-                                    </div>
-                                    <button onclick="window.handleSignOut()" class="p-1.5 bg-emerald-800 hover:bg-rose-700 text-white rounded-xl transition">
-                                        <i data-lucide="log-out" class="w-4 h-4"></i>
-                                    </button>
-                                </div>
-                            ` : `
-                                <button onclick="window.openAuthModal()" class="px-4 py-2 bg-white/10 hover:bg-white/20 text-white border border-emerald-600 rounded-xl font-bold text-xs transition flex items-center gap-2 whitespace-nowrap">
-                                    <i data-lucide="user" class="w-4 h-4 text-emerald-300"></i> Entrar com Google
-                                </button>
-                            `}
-                        </div>
-                    </div>
-                </header>
-
-                <main class="max-w-7xl mx-auto px-4 py-8 flex-1 w-full space-y-6">
-                    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row gap-4 items-center justify-between">
-                        <div class="flex items-center gap-1.5 overflow-x-auto w-full md:w-auto pb-2 md:pb-0">
-                            <button onclick="window.setCategory('ALL')" class="px-3.5 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap ${window.state.selectedCategory === 'ALL' ? 'bg-emerald-800 text-white' : 'bg-slate-100 text-slate-600'}">
-                                Todas as Lojas (${window.state.stores.length})
-                            </button>
-                            <button onclick="window.setCategory('BEST')" class="px-3.5 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap ${window.state.selectedCategory === 'BEST' ? 'bg-emerald-600 text-white' : 'bg-emerald-50 text-emerald-800'}">
-                                Melhores
-                            </button>
-                            <button onclick="window.setCategory('MEDIUM')" class="px-3.5 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap ${window.state.selectedCategory === 'MEDIUM' ? 'bg-amber-500 text-white' : 'bg-amber-50 text-amber-800'}">
-                                Médias
-                            </button>
-                            <button onclick="window.setCategory('WORST')" class="px-3.5 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap ${window.state.selectedCategory === 'WORST' ? 'bg-rose-600 text-white' : 'bg-rose-50 text-rose-800'}">
-                                Piores
-                            </button>
-                        </div>
-                        <div class="flex items-center gap-3 w-full md:w-auto">
-                            <div class="relative flex-1 md:w-64">
-                                <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
-                                <input type="text" placeholder="Buscar loja ou bairro..." id="searchInput" value="${esc(window.state.searchTerm)}" oninput="window.setSearch(this.value)" class="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium"/>
-                            </div>
-                            <select onchange="window.setSort(this.value)" class="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700">
-                                <option value="RATING" ${window.state.sortBy === 'RATING' ? 'selected' : ''}>Maior Nota</option>
-                                <option value="REVIEWS" ${window.state.sortBy === 'REVIEWS' ? 'selected' : ''}>Mais Avaliadas</option>
-                                <option value="NAME" ${window.state.sortBy === 'NAME' ? 'selected' : ''}>Ordem Alfabética</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    ${filtered.length === 0 ? `
-                        <div class="bg-white rounded-2xl p-12 text-center border border-slate-200 space-y-3">
-                            <i data-lucide="alert-circle" class="w-10 h-10 text-slate-300 mx-auto"></i>
-                            <h3 class="text-base font-bold text-slate-700">Nenhum supermercado encontrado</h3>
-                        </div>
-                    ` : `
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            \${filtered.map(st => {
-                                const stStats = st.stats || {};
-                                const coffeeVal = getMajority(stStats.coffee);
-                                const lunchVal = getMajority(stStats.lunch);
-                                const micVal = getMajority(stStats.microwave);
-                                const breakVal = getMajority(stStats.breakTime);
-                                const revCount = st.reviews ? st.reviews.length : 0;
-                                return `
-                                    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition overflow-hidden flex flex-col">
-                                        <div class="p-5 border-b border-slate-100 flex items-start justify-between gap-3">
-                                            <div class="space-y-1">
-                                                <div class="flex items-center gap-2">
-                                                    <span class="px-2.5 py-0.5 rounded-full text-[11px] font-extrabold border ${st.badge.bg} ${st.badge.text} ${st.badge.border}">${st.badge.label}</span>
-                                                    <span class="text-[11px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md">${esc(st.category)}</span>
-                                                </div>
-                                                <h3 class="text-base font-bold text-slate-900 pt-1">${esc(st.name)}</h3>
-                                                <p class="text-xs text-slate-500 flex items-center gap-1">
-                                                    <i data-lucide="map-pin" class="w-3.5 h-3.5 text-emerald-600 shrink-0"></i> ${esc(st.address)}
-                                                </p>
-                                            </div>
-                                            <div class="bg-slate-900 text-white p-2.5 rounded-2xl text-center shrink-0 min-w-[64px]">
-                                                <div class="text-lg font-black text-amber-400 leading-none">${revCount > 0 ? st.score : '-'}</div>
-                                                <div class="text-[9px] font-bold text-slate-400 uppercase tracking-wider mt-1">Nota Geral</div>
-                                            </div>
-                                        </div>
-                                        <div class="p-5 bg-slate-50/50 space-y-3 flex-1">
-                                            <h4 class="text-[11px] font-extrabold uppercase tracking-wider text-slate-400">Resumo das Avaliações</h4>
-                                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
-                                                <div class="bg-white p-3 rounded-xl border border-slate-200 flex items-center justify-between">
-                                                    <span class="font-semibold text-slate-700 flex items-center gap-1.5"><i data-lucide="coffee" class="w-4 h-4 text-amber-600"></i> Café?</span>
-                                                    <span class="font-extrabold px-2.5 py-0.5 rounded border ${coffeeVal === 'SIM' ? 'text-emerald-700 bg-emerald-50 border-emerald-200' : 'text-rose-700 bg-rose-50 border-rose-200'}">${coffeeVal}</span>
-                                                </div>
-                                                <div class="bg-white p-3 rounded-xl border border-slate-200 flex items-center justify-between">
-                                                    <span class="font-semibold text-slate-700 flex items-center gap-1.5"><i data-lucide="utensils" class="w-4 h-4 text-orange-600"></i> Almoço?</span>
-                                                    <span class="font-extrabold px-2.5 py-0.5 rounded border ${lunchVal === 'SIM' ? 'text-emerald-700 bg-emerald-50 border-emerald-200' : 'text-rose-700 bg-rose-50 border-rose-200'}">${lunchVal}</span>
-                                                </div>
-                                                <div class="bg-white p-3 rounded-xl border border-slate-200 flex items-center justify-between">
-                                                    <span class="font-semibold text-slate-700 flex items-center gap-1.5"><i data-lucide="box" class="w-4 h-4 text-purple-600"></i> Micro-ondas?</span>
-                                                    <span class="font-extrabold px-2.5 py-0.5 rounded border ${micVal === 'SIM' ? 'text-emerald-700 bg-emerald-50 border-emerald-200' : 'text-rose-700 bg-rose-50 border-rose-200'}">${micVal}</span>
-                                                </div>
-                                                <div class="bg-white p-3 rounded-xl border border-slate-200 flex items-center justify-between">
-                                                    <span class="font-semibold text-slate-700 flex items-center gap-1.5"><i data-lucide="clock" class="w-4 h-4 text-indigo-600"></i> Pausa certa?</span>
-                                                    <span class="font-extrabold px-2.5 py-0.5 rounded border ${breakVal === 'SIM' ? 'text-emerald-700 bg-emerald-50 border-emerald-200' : 'text-rose-700 bg-rose-50 border-rose-200'}">${breakVal}</span>
-                                                </div>
-                                                <div class="bg-white p-3 rounded-xl border border-slate-200 flex items-center justify-between sm:col-span-2">
-                                                    <span class="font-semibold text-slate-700 flex items-center gap-1.5"><i data-lucide="users" class="w-4 h-4 text-blue-600"></i> Gestão Flexível</span>
-                                                    <span class="font-extrabold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200 text-xs">${stStats.flexibility || 5.0} / 5.0</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="p-4 bg-white border-t border-slate-100 flex items-center justify-between gap-2">
-                                            <span class="text-xs text-slate-500 font-medium">${revCount} avaliações</span>
-                                            <div class="flex items-center gap-2">
-                                                ${window.state.userRole === 'ADMIN' ? `
-                                                    <button onclick="window.openEditStore('\${st.id}')" class="px-2.5 py-1.5 bg-purple-50 text-purple-700 border border-purple-200 text-xs font-bold rounded-xl flex items-center gap-1"><i data-lucide="pencil" class="w-3.5 h-3.5"></i> Editar</button>
-                                                    <button onclick="window.openDeleteStore('\${st.id}')" class="px-2.5 py-1.5 bg-rose-50 text-rose-600 border border-rose-200 text-xs font-bold rounded-xl flex items-center gap-1"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Excluir</button>
-                                                ` : ''}
-                                                <button onclick="window.openReviewModalFor('${st.id}')" class="px-3 py-1.5 bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-bold rounded-xl flex items-center gap-1"><i data-lucide="plus-circle" class="w-3.5 h-3.5"></i> Avaliar</button>
-                                                <button onclick="window.openDetail('${st.id}')" class="px-3.5 py-1.5 bg-slate-900 text-white rounded-xl text-xs font-bold flex items-center gap-1">Ver Detalhes <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i></button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                `;
-                            }).join('')}
-                        </div>
-                    `}
-                </main>
-
-                ${window.state.isAuthModalOpen ? `
-                    <div class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-                        <div class="bg-white w-full max-w-md rounded-2xl shadow-xl p-6 space-y-5 relative">
-                            <button onclick="window.closeModals()" class="absolute top-4 right-4 text-slate-400"><i data-lucide="x" class="w-5 h-5"></i></button>
-                            <div class="text-center space-y-2">
-                                <div class="w-12 h-12 bg-emerald-100 text-emerald-800 rounded-2xl flex items-center justify-center mx-auto"><i data-lucide="lock" class="w-6 h-6"></i></div>
-                                <h3 class="text-lg font-extrabold text-slate-900">Autenticação Necessária</h3>
-                                <p class="text-xs text-slate-600">Para manter a veracidade das avaliações, entre com a sua conta Google.</p>
-                            </div>
-                            <button onclick="window.handleGoogleLogin()" class="w-full py-3 bg-slate-900 text-white rounded-xl font-bold text-xs shadow-md flex items-center justify-center gap-3">Entrar com Conta Google</button>
-                        </div>
-                    </div>
-                ` : ''}
-
-                ${window.state.isAddStoreModalOpen && window.state.userRole === 'ADMIN' ? `
-                    <div class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-                        <div class="bg-white w-full max-w-lg rounded-2xl shadow-xl overflow-hidden relative">
-                            <div class="p-5 bg-purple-900 text-white flex items-center justify-between">
-                                <h3 class="text-base font-bold flex items-center gap-2"><i data-lucide="store" class="w-5 h-5 text-purple-300"></i> Cadastrar Novo Supermercado</h3>
-                                <button onclick="window.closeModals()"><i data-lucide="x" class="w-5 h-5"></i></button>
-                            </div>
-                            <form onsubmit="window.saveNewStore(event)" class="p-6 space-y-4">
-                                <div>
-                                    <label class="block text-xs font-bold text-slate-700 mb-1">Nome do Supermercado *</label>
-                                    <input type="text" required value="\${esc(window.state.newStoreForm.name)}" oninput="state.newStoreForm.name=this.value" placeholder="Ex: Supermercados BH" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs"/>
-                                </div>
-                                <div class="grid grid-cols-2 gap-3">
-                                    <div>
-                                        <label class="block text-xs font-bold text-slate-700 mb-1">Bairro *</label>
-                                        <input type="text" required value="\${esc(window.state.newStoreForm.neighborhood)}" oninput="state.newStoreForm.neighborhood=this.value" placeholder="Ex: Savassi" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs"/>
-                                    </div>
-                                    <div>
-                                        <label class="block text-xs font-bold text-slate-700 mb-1">Categoria</label>
-                                        <select onchange="state.newStoreForm.category=this.value" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs">
-                                            <option value="Supermercado">Supermercado</option>
-                                            <option value="Atacarejo">Atacarejo</option>
-                                            <option value="Hipermercado">Hipermercado</option>
-                                            <option value="Gourmet">Gourmet</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-bold text-slate-700 mb-1">Endereço / Logradouro</label>
-                                    <input type="text" value="\${esc(window.state.newStoreForm.address)}" oninput="state.newStoreForm.address=this.value" placeholder="Ex: Av. do Contorno, 6000" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs"/>
-                                </div>
-                                <div class="pt-3 border-t flex justify-end gap-2">
-                                    <button type="button" onclick="window.closeModals()" class="px-4 py-2 text-slate-600 text-xs font-bold">Cancelar</button>
-                                    <button type="submit" class="px-5 py-2 bg-purple-700 text-white rounded-xl text-xs font-bold shadow-md">Salvar Loja</button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                ` : ''}
-
-                ${window.state.isEditStoreModalOpen && window.state.editingStore && window.state.userRole === 'ADMIN' ? `
-                    <div class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-                        <div class="bg-white w-full max-w-lg rounded-2xl shadow-xl overflow-hidden relative">
-                            <div class="p-5 bg-purple-900 text-white flex items-center justify-between">
-                                <h3 class="text-base font-bold flex items-center gap-2"><i data-lucide="pencil" class="w-5 h-5 text-purple-300"></i> Editar Loja</h3>
-                                <button onclick="window.closeModals()"><i data-lucide="x" class="w-5 h-5"></i></button>
-                            </div>
-                            <form onsubmit="window.saveEditedStore(event)" class="p-6 space-y-4">
-                                <div>
-                                    <label class="block text-xs font-bold text-slate-700 mb-1">Nome *</label>
-                                    <input type="text" required value="\${esc(window.state.editingStore.name)}" oninput="state.editingStore.name=this.value" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs"/>
-                                </div>
-                                <div class="grid grid-cols-2 gap-3">
-                                    <div>
-                                        <label class="block text-xs font-bold text-slate-700 mb-1">Bairro</label>
-                                        <input type="text" value="\${esc(window.state.editingStore.neighborhood)}" oninput="state.editingStore.neighborhood=this.value" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs"/>
-                                    </div>
-                                    <div>
-                                        <label class="block text-xs font-bold text-slate-700 mb-1">Categoria</label>
-                                        <select onchange="state.editingStore.category=this.value" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs">
-                                            <option value="Supermercado" \${window.state.editingStore.category === 'Supermercado' ? 'selected' : ''}>Supermercado</option>
-                                            <option value="Atacarejo" \${window.state.editingStore.category === 'Atacarejo' ? 'selected' : ''}>Atacarejo</option>
-                                            <option value="Hipermercado" \${window.state.editingStore.category === 'Hipermercado' ? 'selected' : ''}>Hipermercado</option>
-                                            <option value="Gourmet" \${window.state.editingStore.category === 'Gourmet' ? 'selected' : ''}>Gourmet</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-bold text-slate-700 mb-1">Endereço Completo</label>
-                                    <input type="text" value="\${esc(window.state.editingStore.address)}" oninput="state.editingStore.address=this.value" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs"/>
-                                </div>
-                                <div class="pt-3 border-t flex justify-end gap-2">
-                                    <button type="button" onclick="window.closeModals()" class="px-4 py-2 text-slate-600 text-xs font-bold">Cancelar</button>
-                                    <button type="submit" class="px-5 py-2 bg-purple-700 text-white rounded-xl text-xs font-bold">Salvar Alterações</button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                ` : ''}
-
-                ${window.state.storeToDelete && window.state.userRole === 'ADMIN' ? `
-                    <div class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-                        <div class="bg-white w-full max-w-md rounded-2xl shadow-xl p-6 space-y-4 text-center">
-                            <div class="w-12 h-12 bg-rose-100 text-rose-600 rounded-2xl flex items-center justify-center mx-auto"><i data-lucide="trash-2" class="w-6 h-6"></i></div>
-                            <h3 class="text-lg font-bold text-slate-900">Excluir Supermercado?</h3>
-                            <p class="text-xs text-slate-600">Remover "\${esc(window.state.storeToDelete.name)}" do banco de dados?</p>
-                            <div class="flex items-center gap-2 pt-2">
-                                <button onclick="window.closeModals()" class="flex-1 py-2.5 bg-slate-100 rounded-xl text-xs font-bold">Cancelar</button>
-                                <button onclick="window.confirmDeleteStore()" class="flex-1 py-2.5 bg-rose-600 text-white rounded-xl text-xs font-bold">Sim, Excluir</button>
-                            </div>
-                        </div>
-                    </div>
-                ` : ''}
-
-                ${window.state.isReviewModalOpen ? `
-                    <div class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-                        <div class="bg-white w-full max-w-2xl rounded-2xl shadow-xl overflow-hidden my-8 max-h-[90vh] flex flex-col">
-                            <div class="p-5 bg-emerald-800 text-white flex items-center justify-between">
-                                <h3 class="text-lg font-bold flex items-center gap-2"><i data-lucide="plus-circle" class="w-5 h-5 text-emerald-300"></i> Avaliar Loja</h3>
-                                <button onclick="window.closeModals()"><i data-lucide="x" class="w-5 h-5"></i></button>
-                            </div>
-                            <form onsubmit="window.submitReview(event); return false;" class="p-6 space-y-5 overflow-y-auto flex-1">
-                                <div>
-                                    <label class="block text-xs font-bold text-slate-800 mb-1">Selecione a Loja *</label>
-                                    <select required onchange="state.reviewForm.storeId=this.value" class="w-full px-3 py-2.5 bg-white border border-slate-300 rounded-xl text-xs font-medium">
-                                        <option value="">-- Selecione --</option>
-                                        \${window.state.stores.map(s => `<option value="${s.id}" ${window.state.reviewForm.storeId === s.id ? 'selected' : ''}>${esc(s.name)} (${esc(s.address)})</option>`).join('')}
-                                    </select>
-                                </div>
-                                <div class="grid grid-cols-3 gap-3">
-                                    <div>
-                                        <label class="block text-xs font-bold text-slate-700 mb-1">Função</label>
-                                        <select onchange="state.reviewForm.role=this.value" class="w-full px-3 py-2 bg-slate-50 border rounded-xl text-xs">
-                                            <option value="Promotor de Vendas" \${window.state.reviewForm.role === 'Promotor de Vendas' ? 'selected' : ''}>Promotor de Vendas</option>
-                                            <option value="Repositor Extra" \${window.state.reviewForm.role === 'Repositor Extra' ? 'selected' : ''}>Repositor Extra</option>
-                                            <option value="Operador de Caixa" \${window.state.reviewForm.role === 'Operador de Caixa' ? 'selected' : ''}>Operador de Caixa</option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label class="block text-xs font-bold text-slate-700 mb-1">Vínculo</label>
-                                        <select onchange="state.reviewForm.status=this.value" class="w-full px-3 py-2 bg-slate-50 border rounded-xl text-xs">
-                                            <option value="Atual" \${window.state.reviewForm.status === 'Atual' ? 'selected' : ''}>Atua Atualmente</option>
-                                            <option value="Ex-freelancer" \${window.state.reviewForm.status === 'Ex-freelancer' ? 'selected' : ''}>Já atuou</option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label class="block text-xs font-bold text-slate-700 mb-1">Tempo</label>
-                                        <select onchange="state.reviewForm.period=this.value" class="w-full px-3 py-2 bg-slate-50 border rounded-xl text-xs">
-                                            <option value="1 a 6 meses" \${window.state.reviewForm.period === '1 a 6 meses' ? 'selected' : ''}>1 a 6 meses</option>
-                                            <option value="Mais de 6 meses" \${window.state.reviewForm.period === 'Mais de 6 meses' ? 'selected' : ''}>Mais de 6 meses</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class="space-y-3 pt-2">
-                                    <div class="bg-amber-50 p-3 rounded-xl border border-amber-200">
-                                        <label class="text-xs font-bold block mb-1">Oferece café?</label>
-                                        <div class="grid grid-cols-2 gap-2">
-                                            <button type="button" onclick="state.reviewForm.coffee='SIM';render()" class="py-2 rounded-xl text-xs font-bold border \${window.state.reviewForm.coffee === 'SIM' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-700'}">SIM</button>
-                                            <button type="button" onclick="state.reviewForm.coffee='NÃO';render()" class="py-2 rounded-xl text-xs font-bold border \${window.state.reviewForm.coffee === 'NÃO' ? 'bg-rose-600 text-white border-rose-600' : 'bg-white text-slate-700'}">NÃO</button>
-                                        </div>
-                                    </div>
-                                    <div class="bg-orange-50 p-3 rounded-xl border border-orange-200">
-                                        <label class="text-xs font-bold block mb-1">Oferece almoço?</label>
-                                        <div class="grid grid-cols-2 gap-2">
-                                            <button type="button" onclick="state.reviewForm.lunch='SIM';render()" class="py-2 rounded-xl text-xs font-bold border \${window.state.reviewForm.lunch === 'SIM' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-700'}">SIM</button>
-                                            <button type="button" onclick="state.reviewForm.lunch='NÃO';render()" class="py-2 rounded-xl text-xs font-bold border \${window.state.reviewForm.lunch === 'NÃO' ? 'bg-rose-600 text-white border-rose-600' : 'bg-white text-slate-700'}">NÃO</button>
-                                        </div>
-                                    </div>
-                                    <div class="bg-purple-50 p-3 rounded-xl border border-purple-200">
-                                        <label class="text-xs font-bold block mb-1">Tem micro-ondas?</label>
-                                        <div class="grid grid-cols-2 gap-2">
-                                            <button type="button" onclick="state.reviewForm.microwave='SIM';render()" class="py-2 rounded-xl text-xs font-bold border \${window.state.reviewForm.microwave === 'SIM' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-700'}">SIM</button>
-                                            <button type="button" onclick="state.reviewForm.microwave='NÃO';render()" class="py-2 rounded-xl text-xs font-bold border \${window.state.reviewForm.microwave === 'NÃO' ? 'bg-rose-600 text-white border-rose-600' : 'bg-white text-slate-700'}">NÃO</button>
-                                        </div>
-                                    </div>
-                                    <div class="bg-indigo-50 p-3 rounded-xl border border-indigo-200">
-                                        <label class="text-xs font-bold block mb-1">Respeita pausa no tempo certo?</label>
-                                        <div class="grid grid-cols-2 gap-2">
-                                            <button type="button" onclick="state.reviewForm.breakTime='SIM';render()" class="py-2 rounded-xl text-xs font-bold border \${window.state.reviewForm.breakTime === 'SIM' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-700'}">SIM</button>
-                                            <button type="button" onclick="state.reviewForm.breakTime='NÃO';render()" class="py-2 rounded-xl text-xs font-bold border \${window.state.reviewForm.breakTime === 'NÃO' ? 'bg-rose-600 text-white border-rose-600' : 'bg-white text-slate-700'}">NÃO</button>
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label class="text-xs font-bold block mb-1">Gestão flexível (1 a 5): <span id="flexLabel" class="text-blue-600">\${window.state.reviewForm.flexibility}</span></label>
-                                        <input type="range" min="1" max="5" value="\${window.state.reviewForm.flexibility}" oninput="state.reviewForm.flexibility=this.value;document.getElementById('flexLabel').textContent=this.value" class="w-full accent-blue-600"/>
-                                    </div>
-                                    <div>
-                                        <label class="block text-xs font-bold text-slate-700 mb-1">Depoimento *</label>
-                                        <textarea required rows="3" oninput="state.reviewForm.comment=this.value" placeholder="Descreva a rotina..." class="w-full px-3 py-2 bg-slate-50 border rounded-xl text-xs">\${esc(window.state.reviewForm.comment)}</textarea>
-                                    </div>
-                                    <div class="flex items-center justify-between bg-slate-100 p-3 rounded-xl">
-                                        <span class="text-xs font-bold">Publicar de forma Anônima?</span>
-                                        <input type="checkbox" \${window.state.reviewForm.isAnonymous ? 'checked' : ''} onchange="state.reviewForm.isAnonymous=this.checked" class="w-4 h-4 accent-emerald-600"/>
-                                    </div>
-                                </div>
-                                <div class="pt-3 border-t flex justify-end gap-3">
-                                    <button type="button" onclick="window.closeModals()" class="px-4 py-2 text-slate-600 text-xs font-bold">Cancelar</button>
-                                    <button type="submit" class="px-5 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold">Publicar Avaliação</button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                ` : ''}
-
-                ${window.state.selectedStoreDetail ? `
-                    <div class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-                        <div class="bg-white w-full max-w-3xl rounded-2xl shadow-xl overflow-hidden my-8 max-h-[90vh] flex flex-col">
-                            <div class="p-5 bg-slate-900 text-white flex items-center justify-between">
-                                <div>
-                                    <span class="text-[10px] font-extrabold uppercase text-emerald-400 bg-emerald-950 px-2 py-0.5 rounded border border-emerald-800">\${esc(window.state.selectedStoreDetail.category)}</span>
-                                    <h3 class="text-lg font-bold pt-1">\${esc(window.state.selectedStoreDetail.name)}</h3>
-                                    <p class="text-xs text-slate-400"><i data-lucide="map-pin" class="w-3.5 h-3.5 inline text-emerald-400"></i> \${esc(window.state.selectedStoreDetail.address)}</p>
-                                </div>
-                                <button onclick="window.closeModals()"><i data-lucide="x" class="w-5 h-5"></i></button>
-                            </div>
-                            <div class="p-6 space-y-6 overflow-y-auto flex-1">
-                                <div class="space-y-3">
-                                    <h4 class="text-xs font-extrabold uppercase text-slate-500">Depoimentos (${window.state.selectedStoreDetail.reviews.length})</h4>${window.state.selectedStoreDetail.reviews.length === 0 ? '<p class="text-xs text-slate-400 italic">Nenhum depoimento ainda.</p>' : window.state.selectedStoreDetail.reviews.map(r => `
-                                        <div class="bg-slate-50 p-4 rounded-xl border space-y-2 text-xs">
-                                            <div class="flex items-center justify-between border-b pb-2">
-                                                <span class="font-bold text-slate-800">${esc(r.userName)} <span class="text-[10px] bg-slate-200 px-2 py-0.5 rounded">${esc(r.role)} • ${esc(r.status)}</span></span>
-                                                <span class="text-[10px] text-slate-400">${esc(r.date)}</span>
-                                            </div>
-                                            <div class="flex gap-2 text-[11px] flex-wrap">
-                                                <span class="px-2 py-0.5 rounded font-bold ${r.coffee === 'SIM' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}">Café: ${r.coffee}</span>
-                                                <span class="px-2 py-0.5 rounded font-bold ${r.lunch === 'SIM' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}">Almoço: ${r.lunch}</span>
-                                                <span class="px-2 py-0.5 rounded font-bold ${r.microwave === 'SIM' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}">Micro-ondas: ${r.microwave}</span>
-                                                <span class="px-2 py-0.5 rounded font-bold ${r.breakTime === 'SIM' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}">Pausa: ${r.breakTime}</span>
-                                            </div>
-                                            <p class="text-slate-700">${esc(r.comment)}</p>
-                                        </div>
-                                    `).join('')}
-                                </div>
-                            </div>
-                            <div class="p-4 bg-slate-50 border-t flex justify-end">
-                                <button onclick="window.closeModals()" class="px-5 py-2 bg-slate-200 text-slate-800 rounded-xl text-xs font-bold">Fechar</button>
-                            </div>
-                        </div>
-                    </div>
-                ` : ''}
-
-                <footer class="bg-slate-900 text-slate-400 text-xs py-6 border-t border-slate-800">
-                    <div class="max-w-7xl mx-auto px-4 text-center space-y-2">
-                        <p class="font-semibold text-slate-300">FreeEval Supermercados — Conectado ao Firebase Cloud Firestore</p>
-                    </div>
-                </footer>
+          if (exibeResultados) {
+            return `
+              <div class="space-y-1">
+                <div class="flex items-center justify-between text-xs font-bold text-slate-800">
+                  <span class="flex items-center gap-1 truncate ${foiEscolha ? 'text-purple-700 font-extrabold' : ''}">
+                    ${foiEscolha ? '<i class="fa-solid fa-circle-check text-purple-600 text-xs shrink-0"></i>' : ''}
+                    <span class="truncate">${op.texto}</span>
+                  </span>
+                  <span class="text-slate-500 font-semibold shrink-0 ml-1">${pct}% <span class="text-[9px]">(${op.votos})</span></span>
+                </div>
+                <div class="w-full h-2 bg-slate-100 rounded-full overflow-hidden border border-slate-200/60">
+                  <div class="h-full ${foiEscolha ? 'bg-purple-600' : 'bg-slate-400'} rounded-full transition-all duration-500" style="width: ${pct}%"></div>
+                </div>
+              </div>
             `;
+          } else {
+            return `
+              <button onclick="votarEnquete(${enq.id}, ${op.id})" class="w-full text-left p-2 rounded-xl border border-slate-200 hover:border-purple-500 hover:bg-purple-50/50 text-xs font-bold text-slate-700 hover:text-purple-700 transition flex items-center justify-between group active:scale-95">
+                <span class="truncate">${op.texto}</span>
+                <i class="fa-regular fa-circle text-slate-300 group-hover:text-purple-600 text-xs shrink-0 ml-1"></i>
+              </button>
+            `;
+          }
+        }).join('');
 
-            lucide.createIcons();
-        }
-        window.render = render;
+        const adminControlsHTML = modoAdmin ? `
+          <div class="flex items-center gap-2 pt-2 border-t border-slate-100">
+            <button onclick="toggleStatusEnquete(${enq.id})" class="flex-1 text-[10px] font-bold py-1 px-2 rounded-lg border ${enq.ativa ? 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100' : 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'} transition flex items-center justify-center gap-1">
+              <i class="fa-solid ${enq.ativa ? 'fa-lock' : 'fa-lock-open'}"></i> ${enq.ativa ? 'Encerrar' : 'Reabrir'}
+            </button>
+            <button onclick="excluirEnquete(${enq.id})" class="flex-1 text-[10px] font-bold py-1 px-2 rounded-lg border bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100 transition flex items-center justify-center gap-1">
+              <i class="fa-solid fa-trash-can"></i> Excluir
+            </button>
+          </div>
+        ` : '';
 
-        window.setCategory = (cat) => { window.state.selectedCategory = cat; render(); };
-        window.setSearch = (val) => { window.state.searchTerm = val; render(); const el = document.getElementById('searchInput'); if (el) { el.focus(); el.setSelectionRange(val.length, val.length); } };
-        window.setSort = (val) => { window.state.sortBy = val; render(); };
-        window.openAuthModal = () => { window.state.isAuthModalOpen = true; render(); };
-        window.openAddStore = () => { if(window.state.userRole !== 'ADMIN') { showToast('Apenas o administrador pode cadastrar lojas.'); return; } window.state.isAddStoreModalOpen = true; render(); };
-        window.openReviewModal = () => { window.state.isReviewModalOpen = true; render(); };
-        window.openReviewModalFor = (id) => { window.state.reviewForm.storeId = id; window.state.isReviewModalOpen = true; render(); };
-        window.openDetail = (id) => { window.state.selectedStoreDetail = window.state.stores.find(s => s.id === id); render(); };
-        window.openEditStore = (id) => { window.state.editingStore = JSON.parse(JSON.stringify(window.state.stores.find(s => s.id === id))); window.state.isEditStoreModalOpen = true; render(); };
-        window.openDeleteStore = (id) => { window.state.storeToDelete = window.state.stores.find(s => s.id === id); render(); };
-        window.closeModals = () => {
-            window.state.isAuthModalOpen = false;
-            window.state.isAddStoreModalOpen = false;
-            window.state.isEditStoreModalOpen = false;
-            window.state.isReviewModalOpen = false;
-            window.state.selectedStoreDetail = null;
-            window.state.storeToDelete = null;
-            render();
-        };
+        return `
+          <div class="bg-white rounded-2xl border border-slate-200 p-3.5 sm:p-5 shadow-sm space-y-3 flex flex-col justify-between card-hover w-full">
+            <div class="space-y-1.5">
+              <div class="flex items-center justify-between gap-2">
+                <span class="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${enq.ativa ? 'bg-purple-100 text-purple-800' : 'bg-slate-200 text-slate-700'} shrink-0">
+                  ${enq.ativa ? '● Ativa' : 'Encerrada'}
+                </span>
+                <span class="text-[9px] text-slate-400 font-semibold shrink-0">${enq.data}</span>
+              </div>
 
-        render();
-    </script>
+              <h3 class="font-extrabold text-slate-900 text-xs sm:text-sm leading-snug">${enq.pergunta}</h3>
+            </div>
+
+            <div class="space-y-1.5">
+              ${opcoesHTML}
+            </div>
+
+            <div class="pt-1.5 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-500 font-semibold">
+              <span>Total: <strong>${enq.totalVotos} voto(s)</strong></span>
+              ${jaVotouOpcaoId !== undefined ? '<span class="text-purple-700 font-bold"><i class="fa-solid fa-check"></i> Votado</span>' : '<span class="text-slate-400">Vote</span>'}
+            </div>
+
+            ${adminControlsHTML}
+          </div>
+        `;
+      }).join('');
+    }
+
+    function votarEnquete(enqueteId, opcaoId) {
+      const enq = enquetes.find(e => e.id === enqueteId);
+      if (!enq || !enq.ativa) {
+        toast('Enquete encerrada.');
+        return;
+      }
+
+      if (votosUsuario[enqueteId] !== undefined) {
+        toast('Você já votou nesta enquete!');
+        return;
+      }
+
+      const op = enq.opcoes.find(o => o.id === opcaoId);
+      if (op) {
+        op.votos += 1;
+        enq.totalVotos += 1;
+        votosUsuario[enqueteId] = opcaoId;
+        
+        try {
+          localStorage.setItem('votosUsuarioGuiaFreela', JSON.stringify(votosUsuario));
+        } catch(err) {}
+
+        renderizarEnquetes();
+        toast('Voto registrado!');
+      }
+    }
+
+    function abrirModalCriarEnquete() {
+      if (!modoAdmin) return;
+
+      document.getElementById('cadEnquetePergunta').value = '';
+      const container = document.getElementById('containerOpcoesEnquete');
+      container.innerHTML = `
+        <div class="flex items-center gap-2">
+          <input type="text" class="input-opcao-enquete w-full p-2.5 text-xs bg-slate-50 rounded-xl border border-slate-200 focus:outline-none focus:border-purple-500" required placeholder="Opção 1 (Ex: Grupo Supernosso)">
+        </div>
+        <div class="flex items-center gap-2">
+          <input type="text" class="input-opcao-enquete w-full p-2.5 text-xs bg-slate-50 rounded-xl border border-slate-200 focus:outline-none focus:border-purple-500" required placeholder="Opção 2 (Ex: Grupo Carrefour)">
+        </div>
+      `;
+
+      abrirModal('modalCriarEnquete');
+    }
+
+    function adicionarCampoOpcaoEnquete() {
+      const container = document.getElementById('containerOpcoesEnquete');
+      const qtdAtual = container.querySelectorAll('.input-opcao-enquete').length;
+
+      if (qtdAtual >= 6) {
+        toast('Limite de 6 opções.');
+        return;
+      }
+
+      const wrapper = document.createElement('div');
+      wrapper.className = 'flex items-center gap-2';
+      wrapper.innerHTML = `
+        <input type="text" class="input-opcao-enquete w-full p-2.5 text-xs bg-slate-50 rounded-xl border border-slate-200 focus:outline-none focus:border-purple-500" required placeholder="Opção ${qtdAtual + 1}">
+        <button type="button" onclick="removerCampoOpcaoEnquete(this)" class="text-slate-400 hover:text-rose-600 p-1">
+          <i class="fa-solid fa-minus-circle text-sm"></i>
+        </button>
+      `;
+
+      container.appendChild(wrapper);
+    }
+
+    function removerCampoOpcaoEnquete(btn) {
+      const container = document.getElementById('containerOpcoesEnquete');
+      if (container.querySelectorAll('.input-opcao-enquete').length <= 2) {
+        toast('Mínimo de 2 opções.');
+        return;
+      }
+      btn.parentElement.remove();
+    }
+
+    function salvarNovaEnquete(e) {
+      e.preventDefault();
+
+      if (!modoAdmin) return;
+
+      const pergunta = document.getElementById('cadEnquetePergunta').value.trim();
+      const inputs = document.querySelectorAll('#containerOpcoesEnquete .input-opcao-enquete');
+      
+      const opcoes = [];
+      let count = 1;
+      inputs.forEach(inEl => {
+        const val = inEl.value.trim();
+        if (val) opcoes.push({ id: count++, texto: val, votos: 0 });
+      });
+
+      if (opcoes.length < 2) {
+        toast('Preencha ao menos 2 opções.');
+        return;
+      }
+
+      const novaEnquete = {
+        id: Date.now(),
+        pergunta,
+        criadoPor: "Administrador",
+        data: "Agora mesmo",
+        ativa: true,
+        totalVotos: 0,
+        opcoes
+      };
+
+      enquetes.unshift(novaEnquete);
+      renderizarEnquetes();
+      fecharModal('modalCriarEnquete');
+      toast(`Enquete criada!`);
+    }
+
+    function toggleStatusEnquete(enqueteId) {
+      if (!modoAdmin) return;
+
+      const enq = enquetes.find(e => e.id === enqueteId);
+      if (enq) {
+        enq.ativa = !enq.ativa;
+        renderizarEnquetes();
+        toast(enq.ativa ? 'Enquete reaberta.' : 'Enquete encerrada.');
+      }
+    }
+
+    function excluirEnquete(enqueteId) {
+      if (!modoAdmin) return;
+
+      const index = enquetes.findIndex(e => e.id === enqueteId);
+      if (index !== -1) {
+        enquetes.splice(index, 1);
+        renderizarEnquetes();
+        toast('Enquete excluída.');
+      }
+    }
+
+    // MODAIS & UTILS
+    function abrirModal(id) {
+      if (id === 'modalCadastrarLoja' && !modoAdmin) {
+        toast('Apenas administradores podem cadastrar lojas.');
+        return;
+      }
+      if (id === 'modalCriarEnquete' && !modoAdmin) {
+        toast('Apenas administradores podem criar enquetes.');
+        return;
+      }
+
+      const modal = document.getElementById(id);
+      if (modal) {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+      }
+    }
+
+    function fecharModal(id) {
+      const modal = document.getElementById(id);
+      if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+      }
+    }
+
+    function toggleMobileMenu() {
+      const menu = document.getElementById('mobileMenu');
+      if (menu) menu.classList.toggle('hidden');
+    }
+
+    function fecharPWABanner() {
+      const banner = document.getElementById('pwaBanner');
+      if (banner) banner.classList.add('translate-y-full');
+    }
+
+    function simularInstalacaoPWA() {
+      toast('Instalando Guia & Freela MG...');
+      setTimeout(() => {
+        fecharPWABanner();
+        toast('App instalado na tela inicial!');
+      }, 1200);
+    }
+
+    function toast(mensagem) {
+      const container = document.getElementById('toastContainer');
+      if (!container) return;
+
+      const toastEl = document.createElement('div');
+      toastEl.className = 'bg-slate-900 text-white text-xs font-bold p-3 rounded-2xl shadow-2xl pointer-events-auto flex items-center gap-2 border border-slate-700 animate-bounce';
+      toastEl.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-400 text-xs"></i> <span>${mensagem}</span>`;
+      
+      container.appendChild(toastEl);
+
+      setTimeout(() => {
+        toastEl.remove();
+      }, 3500);
+    }
+  </script>
+
 </body>
 </html>
